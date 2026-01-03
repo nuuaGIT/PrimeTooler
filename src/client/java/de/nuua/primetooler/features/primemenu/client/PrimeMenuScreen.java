@@ -6,6 +6,7 @@ import de.nuua.primetooler.core.Messages;
 import de.nuua.primetooler.features.autospawn.client.AutoSpawnState;
 import de.nuua.primetooler.api.v1.client.text.RainbowTextRenderer;
 import de.nuua.primetooler.api.v1.client.text.RainbowTextStyle;
+import de.nuua.primetooler.features.chatmention.client.ChatMentionState;
 import de.nuua.primetooler.features.checkitem.client.CheckItemClientModule;
 import de.nuua.primetooler.features.doubledrop.client.DoubleDropState;
 import de.nuua.primetooler.features.playermark.client.PlayerMarkRegistry;
@@ -487,6 +488,15 @@ public final class PrimeMenuScreen extends Screen {
 			clanTagRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_CLANTAG)));
 			visualEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_CLANTAG), clanTagRef[0]));
 
+			Button[] chatMentionRef = new Button[1];
+			chatMentionRef[0] = Button.builder(chatMentionLabel(ChatMentionState.isEnabled()), button -> {
+				boolean enabled = ChatMentionState.toggleEnabled();
+				chatMentionRef[0].setMessage(chatMentionLabel(enabled));
+				saveClientSettings();
+			}).size(CONFIG_BUTTON_WIDTH, BUTTON_HEIGHT).build();
+			chatMentionRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_CHAT_MENTION)));
+			visualEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_CHAT_MENTION), chatMentionRef[0]));
+
 			Button[] frontCameraRef = new Button[1];
 			frontCameraRef[0] = Button.builder(frontCameraLabel(FrontCameraToggleState.isDisabled()), button -> {
 				boolean disabled = FrontCameraToggleState.toggleDisabled();
@@ -860,6 +870,10 @@ public final class PrimeMenuScreen extends Screen {
 		return labelWithState(Messages.get(Messages.Id.LABEL_CLANTAG), enabled);
 	}
 
+	private static Component chatMentionLabel(boolean enabled) {
+		return labelWithState(Messages.get(Messages.Id.LABEL_CHAT_MENTION), enabled);
+	}
+
 	private static Component frontCameraLabel(boolean disabled) {
 		return labelWithState(Messages.get(Messages.Id.LABEL_FRONTCAM), !disabled);
 	}
@@ -924,6 +938,7 @@ public final class PrimeMenuScreen extends Screen {
 			ClanTagState.isEnabled(),
 			BeaconSoundState.isEnabled(),
 			JackpotSoundState.isEnabled(),
+			ChatMentionState.isEnabled(),
 			DoubleDropState.toConfigValue(DoubleDropState.getMode()),
 			Math.round(SoundPlayer.getWarningVolume() * 100.0f)
 		));

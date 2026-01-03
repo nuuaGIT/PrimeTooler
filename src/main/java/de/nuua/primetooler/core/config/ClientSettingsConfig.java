@@ -22,6 +22,7 @@ public final class ClientSettingsConfig {
 	@SerializedName("muteBeaconSound")
 	public boolean muteBoosterSound;
 	public boolean muteJackpotSound;
+	public boolean chatMention;
 	public int doubleDropMode;
 	public int warningSoundVolume = 100;
 
@@ -43,6 +44,7 @@ public final class ClientSettingsConfig {
 		boolean hideClanTag,
 		boolean muteBoosterSound,
 		boolean muteJackpotSound,
+		boolean chatMention,
 		int doubleDropMode,
 		int warningSoundVolume
 	) {
@@ -60,6 +62,7 @@ public final class ClientSettingsConfig {
 		this.hideClanTag = hideClanTag;
 		this.muteBoosterSound = muteBoosterSound;
 		this.muteJackpotSound = muteJackpotSound;
+		this.chatMention = chatMention;
 		this.doubleDropMode = doubleDropMode;
 		this.warningSoundVolume = warningSoundVolume;
 	}

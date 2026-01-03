@@ -4,6 +4,7 @@ import de.nuua.primetooler.core.lifecycle.Boot;
 import de.nuua.primetooler.core.lifecycle.EnvironmentInfo;
 import de.nuua.primetooler.core.config.ClientSettingsConfig;
 import de.nuua.primetooler.features.camerazoom.client.CameraZoomState;
+import de.nuua.primetooler.features.chatmention.client.ChatMentionState;
 import de.nuua.primetooler.features.durabilityguard.client.DurabilityGuardState;
 import de.nuua.primetooler.features.doubledrop.client.DoubleDropState;
 import de.nuua.primetooler.features.inventorycalc.client.InventoryCalculatorState;
@@ -52,6 +53,7 @@ public class PrimeToolerClient implements ClientModInitializer {
 		JackpotSoundState.setEnabled(settings.muteJackpotSound);
 		DoubleDropState.setMode(DoubleDropState.fromConfigValue(settings.doubleDropMode));
 		SoundPlayer.setWarningVolume(settings.warningSoundVolume / 100.0f);
+		ChatMentionState.setEnabled(settings.chatMention);
 		SoundMuteRegistry.register(SoundEvents.BEACON_ACTIVATE.location(), BeaconSoundState::isEnabled);
 		SoundMuteRegistry.register(ResourceLocation.withDefaultNamespace("entity.ender_dragon.growl"),
 			JackpotSoundState::isEnabled);
