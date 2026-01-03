@@ -1,75 +1,70 @@
 # PrimeTooler
 
-**PrimeTooler** is a Minecraft **mod** focused on improving everyday gameplay by adding practical **Quality of Life (QoL)** features.  
-It helps players protect their tools, manage their inventory more comfortably, and avoid common mistakes — while staying close to vanilla gameplay.
+PrimeTooler is a Minecraft mod that provides a set of Quality of Life features aimed at improving everyday gameplay.  
+The mod focuses on inventory management, item protection, and general usability, while remaining as close to vanilla behavior as possible.
 
 ---
 
 ## Features
 
 ### Slot Locking
-Lock individual inventory slots to prevent items from being moved, dropped, or replaced accidentally.  
-Ideal for tools, weapons, and important items you always want to keep in the same place.
+Allows players to lock individual inventory slots.  
+Locked slots prevent items from being moved, dropped, or replaced unintentionally, helping to keep important tools and items in fixed positions.
 
 ### Durability Guard
-Prevents tools and armor from breaking unintentionally:
-- Blocks usage at low durability
-- Optional warnings before an item reaches critical durability
-- Helps protect rare and valuable gear
+Protects tools and armor from breaking due to accidental overuse:
+- Prevents usage when an item reaches a critical durability threshold
+- Optional warnings before durability becomes critical
+- Helps preserve valuable or rare equipment
 
-### Additional QoL Features
-PrimeTooler is designed to be modular and expandable.  
-Current and future features focus on inventory safety, item protection, and general convenience.
+### Additional Quality of Life Features
+PrimeTooler is designed to be modular and extensible.  
+Further Quality of Life features may be added over time, with a focus on usability and player convenience.
 
 ---
 
-## Goal
+## User Interface & Controls
 
-PrimeTooler aims to:
-- Reduce frustration
-- Prevent accidental item loss
-- Improve comfort without affecting game balance
-- Remain vanilla-friendly
+PrimeTooler provides a central configuration interface:
+
+- Press **`P`** to open the **main menu**
+- The key binding can be changed in the **Minecraft Control Settings**
+- Individual features can be configured directly through the menu
 
 ---
 
 ## Configuration
 
-All features are configurable:
-- Enable or disable individual modules
-- Adjust durability thresholds
-- Optional client-side focused behavior
+- Features can be enabled or disabled individually
+- Durability thresholds and behavior can be adjusted
+- Designed primarily for client-side usage
 
 ---
 
 ## Compatibility
 
-- Designed for modern Minecraft versions
-- Works alongside most mods
-- Lightweight and performance-friendly
+- Supports modern Minecraft versions
+- Compatible with common mod setups
+- Lightweight and performance-conscious
 
 ---
 
 ## Installation
 
 1. Install a compatible mod loader (e.g. Fabric or Forge)
-2. Place the PrimeTooler `.jar` file into your `mods` folder
-3. Launch the game
-4. Configure the mod as needed
+2. Place the PrimeTooler `.jar` file into the `mods` directory
+3. Start Minecraft
+4. Adjust settings via the main menu or control settings
 
 ---
 
 ## Development Status
 
-PrimeTooler is actively developed and expanded with new Quality of Life features over time.  
-Feedback and contributions are welcome.
+PrimeTooler is under active development.  
+The mod is continuously refined and extended with additional Quality of Life features.
 
 ---
 
 ## License
 
 This project is licensed under the MIT License.
-
----
-
-PrimeTooler – Quality of Life, done right.
