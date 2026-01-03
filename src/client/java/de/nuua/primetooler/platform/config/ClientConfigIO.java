@@ -51,7 +51,8 @@ public final class ClientConfigIO {
 		try {
 			Files.createDirectories(path.getParent());
 			try (Writer writer = Files.newBufferedWriter(path)) {
-				GSON.toJson(config, writer);
+				ChatInputsConfig trimmed = trimChatInputs(config);
+				GSON.toJson(trimmed, writer);
 			}
 		} catch (IOException ignored) {
 		}
@@ -209,5 +210,32 @@ public final class ClientConfigIO {
 			}
 		}
 		return normalized;
+	}
+
+	private static ChatInputsConfig trimChatInputs(ChatInputsConfig config) {
+		String[] lines = config.lines == null ? new String[0] : config.lines;
+		long[] cooldowns = config.cooldownEnds == null ? new long[0] : config.cooldownEnds;
+		int last = -1;
+		for (int i = 0; i < lines.length; i++) {
+			String value = lines[i];
+			if (value != null && !value.isEmpty()) {
+				last = i;
+			}
+		}
+		if (last < 0) {
+			return new ChatInputsConfig(new String[0], new long[0]);
+		}
+		int length = last + 1;
+		String[] trimmedLines = new String[length];
+		long[] trimmedCooldowns = new long[length];
+		for (int i = 0; i < length; i++) {
+			String value = lines[i];
+			trimmedLines[i] = value == null ? "" : value;
+			if (i < cooldowns.length) {
+				long cooldown = cooldowns[i];
+				trimmedCooldowns[i] = cooldown < 0L ? 0L : cooldown;
+			}
+		}
+		return new ChatInputsConfig(trimmedLines, trimmedCooldowns);
 	}
 }

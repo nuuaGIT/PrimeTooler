@@ -23,7 +23,7 @@ public final class PlayerMarkRegistry {
 		new Member("Nuua", UUID.fromString("0b437436-3ef4-4c65-9f32-8811f0c09004")),
 		new Member("OSCAVI", UUID.fromString("13233136-498e-4881-960c-4b0e332f463e")),
 		new Member("EpicBuilderHD", UUID.fromString("3cfd67ea-df0e-465d-acc0-137373329a3a")),
-		new Member("Lordxemerius", UUID.fromString("6ee78f23-67e7-4c72-ad81-0f277e77a75e"))
+		new Member("1Reflexx", UUID.fromString("1d6e086a-41f7-4ced-b8dc-12b763e9843f"))
 	};
 	private static final Component STAR_PREFIX =
 		Component.literal("★").withStyle(ChatFormatting.RED);
@@ -47,6 +47,9 @@ public final class PlayerMarkRegistry {
 
 	public static Component decorateMarkedName(UUID uuid, Component baseName, String rawName,
 		float timeSeconds, Font font) {
+		if (!SpecialNamesState.isEnabled()) {
+			return baseName;
+		}
 		if (uuid == null || baseName == null || rawName == null || rawName.isEmpty()) {
 			return baseName;
 		}
@@ -94,7 +97,24 @@ public final class PlayerMarkRegistry {
 	}
 
 	public static Member[] specialMembers() {
-		return SPECIAL_PLAYERS.clone();
+		int count = 0;
+		for (int i = 0; i < SPECIAL_PLAYERS.length; i++) {
+			if (!isAdmin(SPECIAL_PLAYERS[i].uuid)) {
+				count++;
+			}
+		}
+		if (count == SPECIAL_PLAYERS.length) {
+			return SPECIAL_PLAYERS.clone();
+		}
+		Member[] filtered = new Member[count];
+		int cursor = 0;
+		for (int i = 0; i < SPECIAL_PLAYERS.length; i++) {
+			Member member = SPECIAL_PLAYERS[i];
+			if (!isAdmin(member.uuid)) {
+				filtered[cursor++] = member;
+			}
+		}
+		return filtered;
 	}
 
 	public static Component rainbowName(String name, float timeSeconds, Font font) {
@@ -204,4 +224,3 @@ public final class PlayerMarkRegistry {
 		return value;
 	}
 }
-

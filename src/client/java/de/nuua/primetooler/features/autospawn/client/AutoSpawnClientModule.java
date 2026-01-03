@@ -11,8 +11,8 @@ import net.minecraft.world.entity.player.Player;
  * PERF: Single float check per tick when enabled.
  */
 public final class AutoSpawnClientModule implements Module {
-	private static final float TRIGGER_RATIO = 0.10f;
-	private static final float RESET_RATIO = 0.15f;
+	private static final float TRIGGER_HEALTH = 5.0f;
+	private static final float RESET_HEALTH = 6.0f;
 	private static boolean triggered;
 
 	@Override
@@ -36,19 +36,15 @@ public final class AutoSpawnClientModule implements Module {
 				triggered = false;
 				return;
 			}
-			float max = player.getMaxHealth();
-			if (max <= 0.0f) {
-				return;
-			}
-			float ratio = player.getHealth() / max;
-			if (ratio <= TRIGGER_RATIO) {
+			float health = player.getHealth();
+			if (health <= TRIGGER_HEALTH) {
 				if (!triggered) {
 					sendSpawnCommand(client);
 					triggered = true;
 				}
 				return;
 			}
-			if (ratio >= RESET_RATIO) {
+			if (health >= RESET_HEALTH) {
 				triggered = false;
 			}
 		});
@@ -62,6 +58,6 @@ public final class AutoSpawnClientModule implements Module {
 		if (client == null || client.getConnection() == null) {
 			return;
 		}
-		client.getConnection().sendChat("/spawn");
+		client.getConnection().sendCommand("p h");
 	}
 }

@@ -3,6 +3,7 @@ package de.nuua.primetooler.features.checkitem.client;
 import de.nuua.primetooler.core.config.ContainerCacheConfig;
 import de.nuua.primetooler.core.config.SavedItemsConfig;
 import de.nuua.primetooler.core.config.SavedSlotsConfig;
+import de.nuua.primetooler.core.Messages;
 import de.nuua.primetooler.core.lifecycle.Bootstrap;
 import de.nuua.primetooler.core.lifecycle.Module;
 import java.util.ArrayList;
@@ -15,7 +16,6 @@ import java.util.UUID;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import de.nuua.primetooler.platform.chat.PlayerMessages;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.component.DataComponents;
@@ -45,9 +45,9 @@ import de.nuua.primetooler.platform.config.ClientConfigIO;
 public final class CheckItemClientModule implements Module {
 	private static final boolean ITEM_SAVE_ENABLED = false;
 	private static final String SAVED_KEY = "primetooler_saved_uuid";
-	private static final String LOCAL_LORE_PREFIX = "pt:";
-	private static final String LOCAL_LORE_TEXT = "&a\u2714 &8&oItem saved!";
-	private static final String LOCAL_LORE_VISIBLE = "\u2714 Item saved!";
+	private static final String LOCAL_LORE_PREFIX = Messages.get(Messages.Id.LORE_PREFIX);
+	private static final String LOCAL_LORE_TEXT = Messages.get(Messages.Id.LORE_SAVED_TEXT);
+	private static final String LOCAL_LORE_VISIBLE = Messages.get(Messages.Id.LORE_SAVED_VISIBLE);
 	private static SavedItemsConfig savedItems;
 	private static boolean savedItemsDirty;
 	private static int refreshTickCounter;
@@ -99,6 +99,10 @@ public final class CheckItemClientModule implements Module {
 	public void postInit(Bootstrap ctx) {
 	}
 
+	private static Component msg(Messages.Id id, Object... args) {
+		return Component.literal(Messages.applyColorCodes(Messages.get(id, args)));
+	}
+
 	private static void printHeldItemDetails() {
 		Minecraft client = Minecraft.getInstance();
 		if (client.player == null) {
@@ -106,35 +110,39 @@ public final class CheckItemClientModule implements Module {
 		}
 		ItemStack stack = client.player.getMainHandItem();
 		if (stack == null || stack.isEmpty()) {
-			client.player.displayClientMessage(PlayerMessages.text(PlayerMessages.Id.CHECKITEM_NO_HAND), false);
+			client.player.displayClientMessage(msg(Messages.Id.CHECKITEM_NO_HAND), false);
 			return;
 		}
 
-		client.player.displayClientMessage(PlayerMessages.text(PlayerMessages.Id.CHECKITEM_DUMP_HEADER), false);
+		client.player.displayClientMessage(msg(Messages.Id.CHECKITEM_DUMP_HEADER), false);
 		client.player.displayClientMessage(
-			PlayerMessages.text(PlayerMessages.Id.CHECKITEM_ID, BuiltInRegistries.ITEM.getKey(stack.getItem())),
+			msg(Messages.Id.CHECKITEM_ID, BuiltInRegistries.ITEM.getKey(stack.getItem())),
 			false
 		);
 		client.player.displayClientMessage(
-			PlayerMessages.text(PlayerMessages.Id.CHECKITEM_COUNT, stack.getCount()),
+			msg(Messages.Id.CHECKITEM_COUNT, stack.getCount()),
 			false
 		);
 		client.player.displayClientMessage(
-			PlayerMessages.text(
-				PlayerMessages.Id.CHECKITEM_DAMAGE,
-				stack.getDamageValue() + "/" + stack.getMaxDamage() + " (damageable=" + stack.isDamageableItem() + ")"
+			msg(
+				Messages.Id.CHECKITEM_DAMAGE,
+				stack.getDamageValue(),
+				stack.getMaxDamage(),
+				stack.isDamageableItem()
 			),
 			false
 		);
 		client.player.displayClientMessage(
-			PlayerMessages.text(
-				PlayerMessages.Id.CHECKITEM_RARITY,
-				stack.getRarity() + ", Enchanted=" + stack.isEnchanted() + ", Foil=" + stack.hasFoil()
+			msg(
+				Messages.Id.CHECKITEM_RARITY,
+				stack.getRarity(),
+				stack.isEnchanted(),
+				stack.hasFoil()
 			),
 			false
 		);
 		client.player.displayClientMessage(
-			PlayerMessages.text(PlayerMessages.Id.CHECKITEM_NAME, stack.getHoverName().getString()),
+			msg(Messages.Id.CHECKITEM_NAME, stack.getHoverName().getString()),
 			false
 		);
 
@@ -156,11 +164,11 @@ public final class CheckItemClientModule implements Module {
 		}
 		ItemStack stack = client.player.getMainHandItem();
 		if (stack == null || stack.isEmpty()) {
-			client.player.displayClientMessage(PlayerMessages.text(PlayerMessages.Id.CHECKITEM_NO_HAND), false);
+			client.player.displayClientMessage(msg(Messages.Id.CHECKITEM_NO_HAND), false);
 			return;
 		}
 		if (!isDifferentiableForSave(stack)) {
-			client.player.displayClientMessage(PlayerMessages.text(PlayerMessages.Id.CHECKITEM_SAVE_DENIED), false);
+			client.player.displayClientMessage(msg(Messages.Id.CHECKITEM_SAVE_DENIED), false);
 			return;
 		}
 		SavedItemsConfig config = ensureSavedConfig();
@@ -182,7 +190,7 @@ public final class CheckItemClientModule implements Module {
 		}
 		saveSavedConfigIfDirty();
 		client.player.displayClientMessage(
-			PlayerMessages.text(PlayerMessages.Id.CHECKITEM_ITEM_SAVED, savedUuid),
+			msg(Messages.Id.CHECKITEM_ITEM_SAVED, savedUuid),
 			false
 		);
 	}
@@ -194,7 +202,7 @@ public final class CheckItemClientModule implements Module {
 		}
 		ItemStack stack = client.player.getMainHandItem();
 		if (stack == null || stack.isEmpty()) {
-			client.player.displayClientMessage(PlayerMessages.text(PlayerMessages.Id.CHECKITEM_NO_HAND), false);
+			client.player.displayClientMessage(msg(Messages.Id.CHECKITEM_NO_HAND), false);
 			return;
 		}
 		SavedItemsConfig config = ensureSavedConfig();
@@ -208,24 +216,24 @@ public final class CheckItemClientModule implements Module {
 		if (removeSavedEntry(config, stack, savedUuid)) {
 			saveSavedConfigIfDirty();
 		}
-		client.player.displayClientMessage(PlayerMessages.text(PlayerMessages.Id.CHECKITEM_ITEM_UNSAVED), false);
+		client.player.displayClientMessage(msg(Messages.Id.CHECKITEM_ITEM_UNSAVED), false);
 	}
 
 	private static void printComponents(Minecraft client, ItemStack stack) {
 		DataComponentMap components = stack.getComponents();
 		client.player.displayClientMessage(
-			PlayerMessages.text(PlayerMessages.Id.CHECKITEM_COMPONENTS_HEADER, components.size()),
+			msg(Messages.Id.CHECKITEM_COMPONENTS_HEADER, components.size()),
 			false
 		);
 		if (components.isEmpty()) {
-			client.player.displayClientMessage(PlayerMessages.text(PlayerMessages.Id.CHECKITEM_COMPONENTS_EMPTY), false);
+			client.player.displayClientMessage(msg(Messages.Id.CHECKITEM_COMPONENTS_EMPTY), false);
 			return;
 		}
 		for (DataComponentType<?> type : components.keySet()) {
 			Object value = components.get(type);
 			String typeId = componentId(type);
 			client.player.displayClientMessage(
-				PlayerMessages.text(PlayerMessages.Id.CHECKITEM_COMPONENTS_ENTRY, typeId, formatComponentValue(value)),
+				msg(Messages.Id.CHECKITEM_COMPONENTS_ENTRY, typeId, formatComponentValue(value)),
 				false
 			);
 		}
@@ -234,23 +242,23 @@ public final class CheckItemClientModule implements Module {
 	private static void printCustomData(Minecraft client, ItemStack stack) {
 		CompoundTag tag = getCustomDataTag(stack);
 		if (tag == null || tag.isEmpty()) {
-			client.player.displayClientMessage(PlayerMessages.text(PlayerMessages.Id.CHECKITEM_CUSTOM_EMPTY), false);
+			client.player.displayClientMessage(msg(Messages.Id.CHECKITEM_CUSTOM_EMPTY), false);
 			return;
 		}
 
-		client.player.displayClientMessage(PlayerMessages.text(PlayerMessages.Id.CHECKITEM_CUSTOM_HEADER), false);
+		client.player.displayClientMessage(msg(Messages.Id.CHECKITEM_CUSTOM_HEADER), false);
 		client.player.displayClientMessage(
-			PlayerMessages.text(PlayerMessages.Id.CHECKITEM_CUSTOM_RAW, tag.toString()),
+			msg(Messages.Id.CHECKITEM_CUSTOM_RAW, tag.toString()),
 			false
 		);
 
 		List<String> found = new ArrayList<>(4);
 		collectUuids(tag, "", found);
 		if (!found.isEmpty()) {
-			client.player.displayClientMessage(PlayerMessages.text(PlayerMessages.Id.CHECKITEM_UUID_HEADER), false);
+			client.player.displayClientMessage(msg(Messages.Id.CHECKITEM_UUID_HEADER), false);
 			for (int i = 0; i < found.size(); i++) {
 				client.player.displayClientMessage(
-					PlayerMessages.text(PlayerMessages.Id.CHECKITEM_UUID_ENTRY, found.get(i)),
+					msg(Messages.Id.CHECKITEM_UUID_ENTRY, found.get(i)),
 					false
 				);
 			}
@@ -261,7 +269,7 @@ public final class CheckItemClientModule implements Module {
 		Item.TooltipContext context = client.level != null ? Item.TooltipContext.of(client.level) : Item.TooltipContext.EMPTY;
 		List<Component> tooltip = stack.getTooltipLines(context, client.player, TooltipFlag.Default.ADVANCED);
 		client.player.displayClientMessage(
-			PlayerMessages.text(PlayerMessages.Id.CHECKITEM_TOOLTIP_HEADER, tooltip.size()),
+			msg(Messages.Id.CHECKITEM_TOOLTIP_HEADER, tooltip.size()),
 			false
 		);
 		for (int i = 0; i < tooltip.size(); i++) {
@@ -273,7 +281,7 @@ public final class CheckItemClientModule implements Module {
 	private static void printSavedStatus(Minecraft client, ItemStack stack) {
 		boolean saved = isSelectedHotbarSlotSaved(client.player);
 		client.player.displayClientMessage(
-			PlayerMessages.text(saved ? PlayerMessages.Id.CHECKITEM_SAVED : PlayerMessages.Id.CHECKITEM_NOT_SAVED),
+			msg(saved ? Messages.Id.CHECKITEM_SAVED : Messages.Id.CHECKITEM_NOT_SAVED),
 			false
 		);
 	}
@@ -306,9 +314,11 @@ public final class CheckItemClientModule implements Module {
 		if (client.player == null) {
 			return;
 		}
-		String state = debugSyncEnabled ? "ON" : "OFF";
+		String state = debugSyncEnabled
+			? Messages.get(Messages.Id.STATE_ON)
+			: Messages.get(Messages.Id.STATE_OFF);
 		client.player.displayClientMessage(
-			PlayerMessages.text(PlayerMessages.Id.DEBUG_SYNC_STATE, state),
+			msg(Messages.Id.DEBUG_SYNC_STATE, state),
 			false
 		);
 	}
@@ -381,7 +391,7 @@ public final class CheckItemClientModule implements Module {
 		savedSlotsDirty = true;
 		saveSavedSlotsIfDirty();
 		player.displayClientMessage(
-			PlayerMessages.text(nowSaved ? PlayerMessages.Id.SLOT_LOCK : PlayerMessages.Id.SLOT_UNLOCK),
+			msg(nowSaved ? Messages.Id.SLOT_LOCK : Messages.Id.SLOT_UNLOCK),
 			false
 		);
 		return true;
@@ -1406,46 +1416,6 @@ public final class CheckItemClientModule implements Module {
 		return null;
 	}
 
-	private static String translateColorCodes(String value) {
-		if (value.indexOf('&') < 0) {
-			return value;
-		}
-		StringBuilder builder = null;
-		int length = value.length();
-		for (int i = 0; i < length; i++) {
-			char c = value.charAt(i);
-			if (c == '&' && i + 1 < length) {
-				char next = value.charAt(i + 1);
-				if (isFormatCode(next)) {
-					if (builder == null) {
-						builder = new StringBuilder(length);
-						builder.append(value, 0, i);
-					}
-					builder.append('\u00A7');
-					i++;
-					builder.append(next);
-					continue;
-				}
-			}
-			if (builder != null) {
-				builder.append(c);
-			}
-		}
-		return builder == null ? value : builder.toString();
-	}
-
-	private static boolean isFormatCode(char code) {
-		char lower = code >= 'A' && code <= 'Z' ? (char) (code + 32) : code;
-		return (lower >= '0' && lower <= '9')
-			|| (lower >= 'a' && lower <= 'f')
-			|| lower == 'k'
-			|| lower == 'l'
-			|| lower == 'm'
-			|| lower == 'n'
-			|| lower == 'o'
-			|| lower == 'r';
-	}
-
 	private static String componentId(DataComponentType<?> type) {
 		var key = BuiltInRegistries.DATA_COMPONENT_TYPE.getKey(type);
 		return key == null ? String.valueOf(type) : key.toString();
@@ -1515,7 +1485,7 @@ public final class CheckItemClientModule implements Module {
 	}
 
 	public static Component savedTooltipLine() {
-		return Component.literal(translateColorCodes(LOCAL_LORE_TEXT));
+		return Component.literal(Messages.applyColorCodes(LOCAL_LORE_TEXT));
 	}
 
 	public static boolean isLocalMarkerLine(Component line) {
@@ -1654,5 +1624,6 @@ public final class CheckItemClientModule implements Module {
 		}
 	}
 }
+
 
 

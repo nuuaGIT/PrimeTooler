@@ -12,6 +12,8 @@ import de.nuua.primetooler.features.autospawn.client.AutoSpawnClientModule;
 import de.nuua.primetooler.features.autospawn.client.AutoSpawnState;
 import de.nuua.primetooler.features.checkitem.client.CheckItemClientModule;
 import de.nuua.primetooler.features.primemenu.client.PrimeMenuClientModule;
+import de.nuua.primetooler.features.camerazoom.client.FrontCameraToggleState;
+import de.nuua.primetooler.features.playermark.client.SpecialNamesState;
 import de.nuua.primetooler.platform.config.ClientConfigIO;
 import de.nuua.primetooler.platform.PlatformEnvironment;
 import de.nuua.primetooler.platform.event.FabricClientTickBridge;
@@ -29,6 +31,8 @@ public class PrimeToolerClient implements ClientModInitializer {
 		ResourcePackGuardState.setEnabled(settings.blockServerPacks);
 		CheckItemClientModule.setSlotLockingEnabled(settings.slotLocking);
 		AutoSpawnState.setEnabled(settings.autoSpawnLowHealth);
+		SpecialNamesState.setEnabled(settings.specialNames);
+		FrontCameraToggleState.setDisabled(settings.disableFrontCamera);
 		if (settings.blockServerPacks) {
 			ResourcePackGuardState.applyClientState(true);
 		}

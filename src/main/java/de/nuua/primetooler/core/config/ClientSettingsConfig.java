@@ -12,6 +12,8 @@ public final class ClientSettingsConfig {
 	public boolean locatorBar = true;
 	public boolean slotLocking = true;
 	public boolean autoSpawnLowHealth;
+	public boolean specialNames = true;
+	public boolean disableFrontCamera;
 
 	public ClientSettingsConfig() {
 	}
@@ -23,7 +25,9 @@ public final class ClientSettingsConfig {
 		boolean blockServerPacks,
 		boolean locatorBar,
 		boolean slotLocking,
-		boolean autoSpawnLowHealth
+		boolean autoSpawnLowHealth,
+		boolean specialNames,
+		boolean disableFrontCamera
 	) {
 		this.unlimitedZoom = unlimitedZoom;
 		this.durabilityGuard = durabilityGuard;
@@ -32,5 +36,7 @@ public final class ClientSettingsConfig {
 		this.locatorBar = locatorBar;
 		this.slotLocking = slotLocking;
 		this.autoSpawnLowHealth = autoSpawnLowHealth;
+		this.specialNames = specialNames;
+		this.disableFrontCamera = disableFrontCamera;
 	}
 }
