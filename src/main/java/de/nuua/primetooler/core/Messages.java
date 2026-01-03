@@ -188,7 +188,7 @@ public final class Messages {
 					+ "&7Ideal zum Testen von &f&lFormatierung&7.";
 			case TOOLTIP_CHAT_INPUT ->
 				"&f&lCOLORCODES/n&0&&00 &1&&11 &2&&22 &3&&33 &4&&44 &5&&55 &6&&66 &7&&77 &8&&88 &9&&99 "
-					+ "&a&&aa &b&&bb &c&&cc &d&&dd &e&&ee &f&&ff &o&&oo&rKursiv &l&&ll&rDick &n&&nn&rUnterstrichen\n&m&&mm&rDurchstrichen &f&&fk&rMagisch&r &f&&frReset";
+					+ "&a&&aa &b&&bb &c&&cc &d&&dd &e&&ee &f&&ff &o&&oo&r&fKursiv &l&&ll&rDick &n&&nn&rUnterstrichen\n&m&&mm&rDurchstrichen &f&&fk&rMagisch&r &f&&frReset";
 			case CHECKITEM_NO_HAND -> "&cKein Item in der Haupthand.";
 			case CHECKITEM_DUMP_HEADER -> "&aItem-Dump:";
 			case CHECKITEM_ID -> "ID: " + arg(args, 0);
