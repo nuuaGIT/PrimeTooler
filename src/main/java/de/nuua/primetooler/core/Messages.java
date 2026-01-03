@@ -31,6 +31,7 @@ public final class Messages {
 		BUTTON_CHAT,
 		BUTTON_SELF,
 		BUTTON_ADD,
+		BUTTON_SPECIAL_SUPPORT,
 		STATE_ON,
 		STATE_OFF,
 		LABEL_ZOOM,
@@ -45,6 +46,8 @@ public final class Messages {
 		LABEL_FRONTCAM,
 		LABEL_EFFECTS,
 		LABEL_HUDEFFECTS,
+		LABEL_NO_ACCESS,
+		TOOLTIP_LOCKED,
 		TOOLTIP_ZOOM,
 		TOOLTIP_DURABILITY,
 		TOOLTIP_CALC,
@@ -60,10 +63,12 @@ public final class Messages {
 		TOOLTIP_MSG,
 		TOOLTIP_ADD,
 		TOOLTIP_ADDONLY,
+		TOOLTIP_ADD_LOCKED,
 		TOOLTIP_DELETE,
 		TOOLTIP_SENDCHAT,
 		TOOLTIP_SENDOWN,
 		TOOLTIP_CHAT_INPUT,
+		TOOLTIP_SPECIAL_SUPPORT,
 		CHECKITEM_NO_HAND,
 		CHECKITEM_DUMP_HEADER,
 		CHECKITEM_ID,
@@ -110,7 +115,8 @@ public final class Messages {
 			case CONFIG_DESC_3 -> "und werden lokal gespeichert.";
 			case CHAT_TITLE -> "&lCHAT NACHRICHTEN";
 			case CHAT_DESC_1 -> "Schnelle Presets für Chat-Nachrichten zum Bearbeiten und Senden.";
-			case CHAT_DESC_2 -> "Für häufige Texte; max &f&l10&7 Slots verfügbar.";
+			case CHAT_DESC_2 ->
+				"Für häufige Texte; max &f&l5&7 Slots. &8&o(&f&l25 &8&oals Spezial-Mitglied.)";
 			case CHAT_HINT_INPUT -> "Nachricht eingeben...";
 			case CHAT_READY -> "&a&lBEREIT";
 			case SPECIAL_TITLE -> "&lSPEZIELLE MITGLIEDER";
@@ -124,6 +130,7 @@ public final class Messages {
 			case BUTTON_CHAT -> "CHAT";
 			case BUTTON_SELF -> "AN MICH";
 			case BUTTON_ADD -> "+";
+			case BUTTON_SPECIAL_SUPPORT -> "&f&lPATREON";
 			case STATE_ON -> "AN";
 			case STATE_OFF -> "AUS";
 			case LABEL_ZOOM -> "Unbegrenzter Zoom: ";
@@ -138,6 +145,7 @@ public final class Messages {
 			case LABEL_FRONTCAM -> "Frontkamera: ";
 			case LABEL_EFFECTS -> "Effekte im Inventar: ";
 			case LABEL_HUDEFFECTS -> "Effekte im HUD: ";
+			case LABEL_NO_ACCESS -> "&8&oGesperrt";
 			case TOOLTIP_ZOOM ->
 				"&7Schaltet &f&lUnbegrenzter Zoom&7.";
 			case TOOLTIP_DURABILITY ->
@@ -175,9 +183,12 @@ public final class Messages {
 				"&7Klicke zum Bearbeiten; Text wird direkt gespeichert.";
 			case TOOLTIP_ADD ->
 				"&7Fügt die Nachricht zur Liste hinzu. &8• &7"
-					+ "&7Max. &f&l10&7 Slots.";
+					+ "&7Max. &f&l5&7 Slots. &8&o(&f&l25 &8&oals Spezial-Mitglied.)";
 			case TOOLTIP_ADDONLY ->
 				"&7Neue Schnell-Chat Nachricht anlegen.";
+			case TOOLTIP_ADD_LOCKED ->
+				"&7Für mehr benötigst du eine &f&lSPEZIAL-MITGLIEDSCHAFT&7. &8• &7"
+					+ "&7Kein Zugriff auf zusätzliche &f&lSlots&7.";
 			case TOOLTIP_DELETE ->
 				"&7Löscht den aktuellen Slot.";
 			case TOOLTIP_SENDCHAT ->
@@ -189,6 +200,12 @@ public final class Messages {
 			case TOOLTIP_CHAT_INPUT ->
 				"&f&lCOLORCODES/n&0&&00 &1&&11 &2&&22 &3&&33 &4&&44 &5&&55 &6&&66 &7&&77 &8&&88 &9&&99 "
 					+ "&a&&aa &b&&bb &c&&cc &d&&dd &e&&ee &f&&ff &o&&oo&r&fKursiv &l&&ll&rDick &n&&nn&rUnterstrichen\n&m&&mm&rDurchstrichen &f&&fk&rMagisch&r &f&&frReset";
+			case TOOLTIP_SPECIAL_SUPPORT ->
+				"&7Öffnet die Support-Seite im Browser. &8• &7"
+					+ "&7Danke für deinen &f&lSupport&7.";
+			case TOOLTIP_LOCKED ->
+				"&7Dieses Feature ist nur für &f&lSPEZIELLE MITGLIEDER&7 nutzbar. &8• &7"
+					+ "&7Kein Zugriff auf diese &f&lEinstellung&7.";
 			case CHECKITEM_NO_HAND -> "&cKein Item in der Haupthand.";
 			case CHECKITEM_DUMP_HEADER -> "&aItem-Dump:";
 			case CHECKITEM_ID -> "ID: " + arg(args, 0);
@@ -271,10 +288,3 @@ public final class Messages {
 		return value == null ? "" : value;
 	}
 }
-
-
-
-
-
-
-

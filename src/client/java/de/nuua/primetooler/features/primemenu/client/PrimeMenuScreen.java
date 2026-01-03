@@ -44,6 +44,7 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.Util;
 
 public final class PrimeMenuScreen extends Screen {
 	private static final ResourceLocation TAB_HEADER_BACKGROUND =
@@ -55,7 +56,8 @@ public final class PrimeMenuScreen extends Screen {
 	private static final int CONFIG_BUTTON_WIDTH = (int) (BUTTON_WIDTH * 1.2f);
 	private static final int GRID_COLUMNS = 2;
 	private static final int GRID_ROWS = 3;
-	private static final int CHAT_MESSAGES_MAX = 10;
+	private static final int CHAT_MESSAGES_MAX_DEFAULT = 5;
+	private static final int CHAT_MESSAGES_MAX_SPECIAL = 25;
 	private static final int TAB_CONTENT_TOP_PADDING = 6;
 	private static final int CHAT_ADD_BUTTON_WIDTH = 24;
 	private static final int CHAT_DELETE_WIDTH = 64;
@@ -104,7 +106,9 @@ public final class PrimeMenuScreen extends Screen {
 	@Override
 	protected void init() {
 		tabManager = new TabManager(this::addTabWidget, this::removeWidget);
-		chatToolsTab = new ChatToolsTab(ClientConfigIO.loadChatInputs(CHAT_MESSAGES_MAX));
+		boolean specialAccess = PlayerMarkRegistry.isAuthorizedUser();
+		int maxMessages = getChatMessagesMax(specialAccess);
+		chatToolsTab = new ChatToolsTab(ClientConfigIO.loadChatInputs(maxMessages), maxMessages, specialAccess);
 		specialMembersTab = new SpecialMembersTab();
 		tabNavigationBar = TabNavigationBar.builder(tabManager, width)
 			.addTabs(
@@ -222,6 +226,10 @@ public final class PrimeMenuScreen extends Screen {
 		tabManager.setTabArea(tabArea);
 	}
 
+	private static int getChatMessagesMax(boolean specialAccess) {
+		return specialAccess ? CHAT_MESSAGES_MAX_SPECIAL : CHAT_MESSAGES_MAX_DEFAULT;
+	}
+
 	private static final class PlaceholderTab extends GridLayoutTab {
 		private PlaceholderTab(Component title) {
 			super(title);
@@ -250,6 +258,7 @@ public final class PrimeMenuScreen extends Screen {
 			layout.columnSpacing(12);
 
 			Minecraft client = Minecraft.getInstance();
+			boolean specialAccess = PlayerMarkRegistry.isAuthorizedUser();
 			int row = 0;
 			StringWidget header = new StringWidget(
 				CONFIG_LAYOUT_WIDTH,
@@ -291,11 +300,19 @@ public final class PrimeMenuScreen extends Screen {
 
 			Button[] toggleRef = new Button[1];
 			toggleRef[0] = Button.builder(zoomLabel(CameraZoomState.isEnabled()), button -> {
+				if (!specialAccess) {
+					return;
+				}
 				boolean enabled = CameraZoomState.toggleEnabled();
 				toggleRef[0].setMessage(zoomLabel(enabled));
 				saveClientSettings();
 			}).size(CONFIG_BUTTON_WIDTH, BUTTON_HEIGHT).build();
 			toggleRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_ZOOM)));
+			if (!specialAccess) {
+				toggleRef[0].active = false;
+				toggleRef[0].setMessage(noAccessLabel());
+				toggleRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_LOCKED)));
+			}
 			layout.addChild(toggleRef[0], row + 0, 0);
 
 			Button[] durabilityRef = new Button[1];
@@ -354,11 +371,19 @@ public final class PrimeMenuScreen extends Screen {
 
 			Button[] autoSpawnRef = new Button[1];
 			autoSpawnRef[0] = Button.builder(autoSpawnLabel(AutoSpawnState.isEnabled()), button -> {
+				if (!specialAccess) {
+					return;
+				}
 				boolean enabled = AutoSpawnState.toggleEnabled();
 				autoSpawnRef[0].setMessage(autoSpawnLabel(enabled));
 				saveClientSettings();
 			}).size(CONFIG_BUTTON_WIDTH, BUTTON_HEIGHT).build();
 			autoSpawnRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_AUTOSPAWN)));
+			if (!specialAccess) {
+				autoSpawnRef[0].active = false;
+				autoSpawnRef[0].setMessage(noAccessLabel());
+				autoSpawnRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_LOCKED)));
+			}
 			layout.addChild(autoSpawnRef[0], row + 3, 1);
 
 			Button[] specialNamesRef = new Button[1];
@@ -454,6 +479,10 @@ public final class PrimeMenuScreen extends Screen {
 		return labelWithState(Messages.get(Messages.Id.LABEL_HUDEFFECTS), enabled);
 	}
 
+	private static Component noAccessLabel() {
+		return Component.literal(Messages.applyColorCodes(Messages.get(Messages.Id.LABEL_NO_ACCESS)));
+	}
+
 	private static Component labelWithState(String label, boolean enabled) {
 		MutableComponent base = Component.literal(Messages.applyColorCodes(label));
 		Component state = enabled
@@ -491,6 +520,8 @@ public final class PrimeMenuScreen extends Screen {
 		private int areaWidth;
 		private int areaHeight;
 		private boolean areaValid;
+		private final int maxMessages;
+		private final boolean specialAccess;
 		private final Button[] messageButtons;
 		private final StringWidget[] timerLabels;
 		private final long[] cooldownEnds;
@@ -504,7 +535,9 @@ public final class PrimeMenuScreen extends Screen {
 		private boolean adding;
 		private int editingIndex = -1;
 
-		private ChatToolsTab(ChatInputsConfig config) {
+		private ChatToolsTab(ChatInputsConfig config, int maxMessages, boolean specialAccess) {
+			this.maxMessages = Math.max(1, maxMessages);
+			this.specialAccess = specialAccess;
 			Minecraft client = Minecraft.getInstance();
 			contentLayout.rowSpacing(CHAT_ROW_SPACING);
 			contentLayout.columnSpacing(CHAT_COLUMN_SPACING);
@@ -512,11 +545,11 @@ public final class PrimeMenuScreen extends Screen {
 			controlsLayout.columnSpacing(0);
 			messagesLayout.rowSpacing(CHAT_ROW_SPACING);
 			messagesLayout.columnSpacing(0);
-			messageButtons = new Button[CHAT_MESSAGES_MAX];
-			timerLabels = new StringWidget[CHAT_MESSAGES_MAX];
+			messageButtons = new Button[this.maxMessages];
+			timerLabels = new StringWidget[this.maxMessages];
 			cooldownEnds = normalizeCooldowns(config != null ? config.cooldownEnds : null);
 			messages = normalizeMessages(config != null ? config.lines : null);
-			for (int i = 0; i < CHAT_MESSAGES_MAX; i++) {
+			for (int i = 0; i < this.maxMessages; i++) {
 				int row = i;
 				int index = i;
 				Button messageButton = Button.builder(Component.literal(""), button -> beginEdit(index))
@@ -589,6 +622,8 @@ public final class PrimeMenuScreen extends Screen {
 				.size(CHAT_ACTION_WIDTH, BUTTON_HEIGHT)
 				.build();
 			editSendOwnButton.setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_SENDOWN)));
+
+			updateAddButtonsState();
 
 			StringWidget header = new StringWidget(
 				CHAT_LAYOUT_WIDTH,
@@ -926,10 +961,17 @@ public final class PrimeMenuScreen extends Screen {
 			boolean hasSlot = findEmptySlot() >= 0;
 			addButton.active = hasSlot;
 			addOnlyButton.active = hasSlot;
+			if (!hasSlot && !specialAccess) {
+				addButton.setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_ADD_LOCKED)));
+				addOnlyButton.setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_ADD_LOCKED)));
+			} else {
+				addButton.setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_ADD)));
+				addOnlyButton.setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_ADDONLY)));
+			}
 		}
 
-		private static String[] normalizeMessages(String[] input) {
-			String[] normalized = new String[CHAT_MESSAGES_MAX];
+		private String[] normalizeMessages(String[] input) {
+			String[] normalized = new String[maxMessages];
 			if (input != null) {
 				int count = Math.min(input.length, normalized.length);
 				for (int i = 0; i < count; i++) {
@@ -959,8 +1001,8 @@ public final class PrimeMenuScreen extends Screen {
 			return Component.literal(formatCooldown(remainingMs));
 		}
 
-		private static long[] normalizeCooldowns(long[] input) {
-			long[] normalized = new long[CHAT_MESSAGES_MAX];
+		private long[] normalizeCooldowns(long[] input) {
+			long[] normalized = new long[maxMessages];
 			if (input != null) {
 				int count = Math.min(input.length, normalized.length);
 				for (int i = 0; i < count; i++) {
@@ -1073,6 +1115,7 @@ public final class PrimeMenuScreen extends Screen {
 		private static final int COLOR_SUBTITLE = 0xFFB8B8B8;
 		private static final int COLOR_SECTION = 0xFFFF5555;
 		private static final int COLOR_ADMIN_PREFIX = 0xFFFF5555;
+		private static final String SUPPORT_URL = "https://www.patreon.com/cw/NuuaGifter";
 		private static final String TITLE = Messages.get(Messages.Id.SPECIAL_TITLE);
 		private static final String DESC_LINE_1 = Messages.get(Messages.Id.SPECIAL_DESC_1);
 		private static final String DESC_LINE_2 = Messages.get(Messages.Id.SPECIAL_DESC_2);
@@ -1135,6 +1178,13 @@ public final class PrimeMenuScreen extends Screen {
 			);
 			desc4.setColor(COLOR_SUBTITLE);
 			contentLayout.addChild(desc4, row++, 0, settings -> settings.alignHorizontallyCenter());
+
+			Button supportButton = Button.builder(
+				Component.literal(Messages.get(Messages.Id.BUTTON_SPECIAL_SUPPORT)),
+				button -> Util.getPlatform().openUri(SUPPORT_URL)
+			).size(BUTTON_WIDTH, BUTTON_HEIGHT).build();
+			supportButton.setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_SPECIAL_SUPPORT)));
+			contentLayout.addChild(supportButton, row++, 0, settings -> settings.alignHorizontallyCenter());
 
 			contentLayout.addChild(new SpacerWidget(LIST_WIDTH, 4), row++, 0);
 

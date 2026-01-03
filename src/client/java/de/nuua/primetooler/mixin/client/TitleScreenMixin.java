@@ -1,11 +1,14 @@
 package de.nuua.primetooler.mixin.client;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.network.chat.Component;
 import de.nuua.primetooler.api.v1.client.text.RainbowTextRenderer;
 import de.nuua.primetooler.api.v1.client.text.RainbowTextStyle;
 import de.nuua.primetooler.PrimeTooler;
+import de.nuua.primetooler.features.playermark.client.PlayerMarkRegistry;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -19,12 +22,16 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(TitleScreen.class)
 public class TitleScreenMixin {
 	private static final String TITLE_LINE = "PrimeTooler";
-private static final String AUTHOR_LINE = "By @nuua";
-private static final int COLOR_AUTHOR = 0xFFCCCCCC;
-private static final int COLOR_VERSION = 0xFFB0B0B0;
+	private static final String STATUS_LABEL = "Status: ";
+	private static final String STATUS_NORMAL = "Normal";
+	private static final String STATUS_SPECIAL = "SPEZIAL-MITGLIED";
+	private static final int COLOR_STATUS_LABEL = 0xFFCCCCCC;
+	private static final int COLOR_STATUS_NORMAL = 0xFF555555;
+	private static final int COLOR_VERSION = 0xFFB0B0B0;
 	private static final int PADDING_X = 4;
 	private static final int PADDING_Y = 4;
-private static final RainbowTextStyle TITLE_STYLE = new RainbowTextStyle(0.25f, 0.66f, 1.0f, 1.0f, 180.0f, true);
+	private static final RainbowTextStyle TITLE_STYLE =
+		new RainbowTextStyle(0.25f, 0.66f, 1.0f, 1.0f, 180.0f, true);
 	@Inject(method = "render", at = @At(
 		value = "INVOKE",
 		target = "Lnet/minecraft/client/gui/screens/TitleScreen;renderPanorama(Lnet/minecraft/client/gui/GuiGraphics;F)V",
@@ -42,8 +49,15 @@ private static final RainbowTextStyle TITLE_STYLE = new RainbowTextStyle(0.25f, 
 		RainbowTextRenderer.draw(graphics, font, TITLE_LINE, PADDING_X, PADDING_Y, timeSeconds, TITLE_STYLE);
 		int versionY = PADDING_Y + font.lineHeight + 2;
 		graphics.drawString(font, "v" + PrimeTooler.VERSION, PADDING_X, versionY, COLOR_VERSION, true);
-		int authorY = versionY + (font.lineHeight + 2) * 2;
-		graphics.drawString(font, AUTHOR_LINE, PADDING_X, authorY, COLOR_AUTHOR, true);
+		int statusY = versionY + (font.lineHeight + 2) * 2;
+		graphics.drawString(font, STATUS_LABEL, PADDING_X, statusY, COLOR_STATUS_LABEL, true);
+		int statusX = PADDING_X + font.width(STATUS_LABEL);
+		if (PlayerMarkRegistry.isAuthorizedUser()) {
+			RainbowTextRenderer.draw(graphics, font, STATUS_SPECIAL, statusX, statusY, timeSeconds, TITLE_STYLE);
+		} else {
+			Component normal = Component.literal(STATUS_NORMAL).withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC);
+			graphics.drawString(font, normal, statusX, statusY, COLOR_STATUS_NORMAL, true);
+		}
 	}
 
 	// Intentionally left empty: we keep vanilla title-screen buttons.

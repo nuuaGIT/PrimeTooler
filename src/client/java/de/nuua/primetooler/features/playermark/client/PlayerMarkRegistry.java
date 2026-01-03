@@ -122,6 +122,15 @@ public final class PlayerMarkRegistry {
 		return rainbowComponent(name, timeSeconds, font);
 	}
 
+	public static boolean isAuthorizedUser() {
+		Minecraft client = Minecraft.getInstance();
+		if (client == null || client.getUser() == null) {
+			return false;
+		}
+		UUID uuid = client.getUser().getProfileId();
+		return uuid != null && (isAdmin(uuid) || isSpecial(uuid));
+	}
+
 	private static boolean isAdmin(UUID uuid) {
 		for (int i = 0; i < ADMIN_PLAYERS.length; i++) {
 			if (ADMIN_PLAYERS[i].uuid.equals(uuid)) {
