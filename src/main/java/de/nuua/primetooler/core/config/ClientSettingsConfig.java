@@ -1,5 +1,7 @@
 package de.nuua.primetooler.core.config;
 
+import com.google.gson.annotations.SerializedName;
+
 /**
  * WHY: Persist client-only toggle state across sessions.
  * PERF: Plain data holder, no logic.
@@ -17,7 +19,11 @@ public final class ClientSettingsConfig {
 	public boolean inventoryEffects = true;
 	public boolean hudEffects = true;
 	public boolean hideClanTag;
-	public boolean muteBeaconSound;
+	@SerializedName("muteBeaconSound")
+	public boolean muteBoosterSound;
+	public boolean muteJackpotSound;
+	public int doubleDropMode;
+	public int warningSoundVolume = 100;
 
 	public ClientSettingsConfig() {
 	}
@@ -35,7 +41,10 @@ public final class ClientSettingsConfig {
 		boolean inventoryEffects,
 		boolean hudEffects,
 		boolean hideClanTag,
-		boolean muteBeaconSound
+		boolean muteBoosterSound,
+		boolean muteJackpotSound,
+		int doubleDropMode,
+		int warningSoundVolume
 	) {
 		this.unlimitedZoom = unlimitedZoom;
 		this.durabilityGuard = durabilityGuard;
@@ -49,6 +58,9 @@ public final class ClientSettingsConfig {
 		this.inventoryEffects = inventoryEffects;
 		this.hudEffects = hudEffects;
 		this.hideClanTag = hideClanTag;
-		this.muteBeaconSound = muteBeaconSound;
+		this.muteBoosterSound = muteBoosterSound;
+		this.muteJackpotSound = muteJackpotSound;
+		this.doubleDropMode = doubleDropMode;
+		this.warningSoundVolume = warningSoundVolume;
 	}
 }

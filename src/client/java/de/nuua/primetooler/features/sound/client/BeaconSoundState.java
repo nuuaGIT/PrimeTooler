@@ -1,8 +1,8 @@
 package de.nuua.primetooler.features.sound.client;
 
 /**
- * WHY: Client-only toggle for muting beacon event sounds.
- * PERF: One boolean check per sound play.
+ * WHY: Client-Option zum Stummschalten von Booster-/Beacon-Sounds.
+ * PERF: Ein Boolean-Check pro Sound-Play.
  */
 public final class BeaconSoundState {
 	private static boolean enabled;

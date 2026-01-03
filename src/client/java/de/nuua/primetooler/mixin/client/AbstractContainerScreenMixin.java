@@ -1,6 +1,7 @@
 package de.nuua.primetooler.mixin.client;
 
 import de.nuua.primetooler.features.checkitem.client.CheckItemClientModule;
+import de.nuua.primetooler.platform.input.PrimeToolerKeyBindings;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -10,7 +11,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
-import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -127,7 +127,7 @@ public abstract class AbstractContainerScreenMixin {
 		if (!CheckItemClientModule.isSlotLockingEnabled()) {
 			return;
 		}
-		if (event.key() != GLFW.GLFW_KEY_L) {
+		if (!matchesSlotLockKey(event)) {
 			return;
 		}
 		if (hoveredSlot == null) {
@@ -141,6 +141,17 @@ public abstract class AbstractContainerScreenMixin {
 			return;
 		}
 		cir.setReturnValue(true);
+	}
+
+	private static boolean matchesSlotLockKey(KeyEvent event) {
+		if (event == null) {
+			return false;
+		}
+		var key = PrimeToolerKeyBindings.slotLockKey();
+		if (key == null) {
+			return false;
+		}
+		return key.matches(event);
 	}
 
 	@Inject(

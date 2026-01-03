@@ -5,6 +5,7 @@ import de.nuua.primetooler.core.lifecycle.EnvironmentInfo;
 import de.nuua.primetooler.core.config.ClientSettingsConfig;
 import de.nuua.primetooler.features.camerazoom.client.CameraZoomState;
 import de.nuua.primetooler.features.durabilityguard.client.DurabilityGuardState;
+import de.nuua.primetooler.features.doubledrop.client.DoubleDropState;
 import de.nuua.primetooler.features.inventorycalc.client.InventoryCalculatorState;
 import de.nuua.primetooler.features.inventoryeffects.client.InventoryEffectsState;
 import de.nuua.primetooler.features.inventoryeffects.client.HudEffectsState;
@@ -19,10 +20,15 @@ import de.nuua.primetooler.features.playermark.client.SpecialNamesState;
 import de.nuua.primetooler.features.playermark.client.PlayerMarkRegistry;
 import de.nuua.primetooler.features.playermark.client.ClanTagState;
 import de.nuua.primetooler.features.sound.client.BeaconSoundState;
+import de.nuua.primetooler.features.sound.client.JackpotSoundState;
+import de.nuua.primetooler.features.sound.client.SoundMuteRegistry;
+import de.nuua.primetooler.platform.sound.SoundPlayer;
 import de.nuua.primetooler.platform.config.ClientConfigIO;
 import de.nuua.primetooler.platform.PlatformEnvironment;
 import de.nuua.primetooler.platform.event.FabricClientTickBridge;
 import net.fabricmc.api.ClientModInitializer;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvents;
 
 public class PrimeToolerClient implements ClientModInitializer {
 	@Override
@@ -42,7 +48,13 @@ public class PrimeToolerClient implements ClientModInitializer {
 		InventoryEffectsState.setEnabled(settings.inventoryEffects);
 		HudEffectsState.setEnabled(settings.hudEffects);
 		ClanTagState.setEnabled(settings.hideClanTag);
-		BeaconSoundState.setEnabled(settings.muteBeaconSound);
+		BeaconSoundState.setEnabled(settings.muteBoosterSound);
+		JackpotSoundState.setEnabled(settings.muteJackpotSound);
+		DoubleDropState.setMode(DoubleDropState.fromConfigValue(settings.doubleDropMode));
+		SoundPlayer.setWarningVolume(settings.warningSoundVolume / 100.0f);
+		SoundMuteRegistry.register(SoundEvents.BEACON_ACTIVATE.location(), BeaconSoundState::isEnabled);
+		SoundMuteRegistry.register(ResourceLocation.withDefaultNamespace("entity.ender_dragon.growl"),
+			JackpotSoundState::isEnabled);
 		if (settings.blockServerPacks) {
 			ResourcePackGuardState.applyClientState(true);
 		}

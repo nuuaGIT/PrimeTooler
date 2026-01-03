@@ -7,10 +7,12 @@ import de.nuua.primetooler.features.autospawn.client.AutoSpawnState;
 import de.nuua.primetooler.api.v1.client.text.RainbowTextRenderer;
 import de.nuua.primetooler.api.v1.client.text.RainbowTextStyle;
 import de.nuua.primetooler.features.checkitem.client.CheckItemClientModule;
+import de.nuua.primetooler.features.doubledrop.client.DoubleDropState;
 import de.nuua.primetooler.features.playermark.client.PlayerMarkRegistry;
 import de.nuua.primetooler.features.playermark.client.SpecialNamesState;
 import de.nuua.primetooler.features.playermark.client.ClanTagState;
 import de.nuua.primetooler.features.sound.client.BeaconSoundState;
+import de.nuua.primetooler.features.sound.client.JackpotSoundState;
 import de.nuua.primetooler.features.camerazoom.client.FrontCameraToggleState;
 import de.nuua.primetooler.features.camerazoom.client.CameraZoomState;
 import de.nuua.primetooler.features.durabilityguard.client.DurabilityGuardState;
@@ -20,11 +22,15 @@ import de.nuua.primetooler.features.inventoryeffects.client.HudEffectsState;
 import de.nuua.primetooler.features.locatorbar.client.LocatorBarState;
 import de.nuua.primetooler.features.resourcepackguard.client.ResourcePackGuardState;
 import de.nuua.primetooler.platform.config.ClientConfigIO;
+import de.nuua.primetooler.platform.input.PrimeToolerKeyBindings;
+import de.nuua.primetooler.platform.sound.SoundPlayer;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.StringWidget;
@@ -153,6 +159,9 @@ public final class PrimeMenuScreen extends Screen {
 			float timeSeconds = (float) (System.nanoTime() * 1.0e-9);
 			specialMembersTab.updateAnimatedTitle(timeSeconds, minecraft.font);
 			updateSpecialTabButtonTitle();
+		}
+		if (homeTab != null && tabManager != null && tabManager.getCurrentTab() == homeTab) {
+			homeTab.refreshKeyTooltips();
 		}
 		if (tabManager != null) {
 			Tab current = tabManager.getCurrentTab();
@@ -284,6 +293,8 @@ public final class PrimeMenuScreen extends Screen {
 		private final StringWidget visualHeader;
 		private final StringWidget soundHeader;
 		private final EditBox searchBox;
+		private final Button slotLockButton;
+		private final Button doubleDropButton;
 
 		private PrimeMenuHomeTab(
 			java.util.function.Consumer<AbstractWidget> addWidget,
@@ -409,8 +420,21 @@ public final class PrimeMenuScreen extends Screen {
 				slotLockRef[0].setMessage(slotLockLabel(enabled));
 				saveClientSettings();
 			}).size(CONFIG_BUTTON_WIDTH, BUTTON_HEIGHT).build();
-			slotLockRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_SLOTLOCK)));
+			slotLockRef[0].setTooltip(tooltipWithKey(Messages.get(Messages.Id.TOOLTIP_SLOTLOCK),
+				PrimeToolerKeyBindings.slotLockKey()));
 			gameplayEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_SLOTLOCK), slotLockRef[0]));
+			slotLockButton = slotLockRef[0];
+
+			Button[] doubleDropRef = new Button[1];
+			doubleDropRef[0] = Button.builder(doubleDropLabel(DoubleDropState.getMode()), button -> {
+				DoubleDropState.Mode mode = DoubleDropState.cycleMode();
+				doubleDropRef[0].setMessage(doubleDropLabel(mode));
+				saveClientSettings();
+			}).size(CONFIG_BUTTON_WIDTH, BUTTON_HEIGHT).build();
+			doubleDropRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_DOUBLE_DROP)));
+			gameplayEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_DOUBLE_DROP), doubleDropRef[0]));
+			doubleDropButton = doubleDropRef[0];
+
 
 			Button[] syncDebugRef = new Button[1];
 			syncDebugRef[0] = Button.builder(debugSyncLabel(CheckItemClientModule.isDebugSyncEnabled()), button -> {
@@ -507,16 +531,57 @@ public final class PrimeMenuScreen extends Screen {
 			beaconSoundRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_BEACON_SOUND)));
 			soundEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_BEACON_SOUND), beaconSoundRef[0]));
 
+			Button[] jackpotSoundRef = new Button[1];
+			jackpotSoundRef[0] = Button.builder(jackpotSoundLabel(JackpotSoundState.isEnabled()), button -> {
+				boolean enabled = JackpotSoundState.toggleEnabled();
+				jackpotSoundRef[0].setMessage(jackpotSoundLabel(enabled));
+				saveClientSettings();
+			}).size(CONFIG_BUTTON_WIDTH, BUTTON_HEIGHT).build();
+			jackpotSoundRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_JACKPOT_SOUND)));
+			soundEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_JACKPOT_SOUND), jackpotSoundRef[0]));
+
+			int warnPercent = Math.round(SoundPlayer.getWarningVolume() * 100.0f);
+			WarningSoundSlider warningSlider = new WarningSoundSlider(0, 0, CONFIG_BUTTON_WIDTH, BUTTON_HEIGHT,
+				warnPercent, PrimeMenuScreen::saveClientSettings);
+			warningSlider.setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_WARNING_SOUND)));
+			soundEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_WARNING_SOUND), warningSlider));
+
 			rebuildContentLayout("");
 		}
 
 		private static final class ButtonEntry {
 			private final String label;
-			private final Button button;
+			private final AbstractWidget button;
 
-			private ButtonEntry(String label, Button button) {
+			private ButtonEntry(String label, AbstractWidget button) {
 				this.label = label == null ? "" : label;
 				this.button = button;
+			}
+		}
+
+		private static final class WarningSoundSlider extends AbstractSliderButton {
+			private final Runnable onChange;
+
+			private WarningSoundSlider(int x, int y, int width, int height, int percent, Runnable onChange) {
+				super(x, y, width, height, Component.literal(percent + "%"), percent / 100.0);
+				this.onChange = onChange;
+				updateMessage();
+			}
+
+			@Override
+			protected void updateMessage() {
+				int percent = (int) Math.round(this.value * 100.0);
+				String label = Messages.get(Messages.Id.LABEL_WARNING_SOUND);
+				setMessage(Component.literal(label + percent + "%"));
+			}
+
+			@Override
+			protected void applyValue() {
+				int percent = (int) Math.round(this.value * 100.0);
+				SoundPlayer.setWarningVolume(percent / 100.0f);
+				if (onChange != null) {
+					onChange.run();
+				}
 			}
 		}
 
@@ -567,6 +632,7 @@ public final class PrimeMenuScreen extends Screen {
 
 		private void applySearch(String query) {
 			String q = normalizeSearchText(query);
+			refreshKeyTooltips();
 			rebuildContentLayout(q);
 			ScrollableReflection.scrollToTop(scrollLayout);
 			if (lastArea != null) {
@@ -584,6 +650,7 @@ public final class PrimeMenuScreen extends Screen {
 				desc2.visible = true;
 				desc3.visible = true;
 				searchBox.visible = true;
+				refreshKeyTooltips();
 				applySearch(searchBox.getValue());
 				return;
 			}
@@ -611,6 +678,13 @@ public final class PrimeMenuScreen extends Screen {
 			}
 			for (int i = 0; i < soundEntries.size(); i++) {
 				soundEntries.get(i).button.visible = false;
+			}
+		}
+
+		private void refreshKeyTooltips() {
+			if (slotLockButton != null) {
+				slotLockButton.setTooltip(tooltipWithKey(Messages.get(Messages.Id.TOOLTIP_SLOTLOCK),
+					PrimeToolerKeyBindings.slotLockKey()));
 			}
 		}
 
@@ -760,6 +834,16 @@ public final class PrimeMenuScreen extends Screen {
 		return labelWithState(Messages.get(Messages.Id.LABEL_SLOTLOCK), enabled);
 	}
 
+	private static Component doubleDropLabel(DoubleDropState.Mode mode) {
+		String label = Messages.get(Messages.Id.LABEL_DOUBLE_DROP);
+		String state = switch (mode) {
+			case ALL -> Messages.get(Messages.Id.STATE_ALL);
+			case RARE -> Messages.get(Messages.Id.STATE_RARE);
+			default -> Messages.get(Messages.Id.STATE_OFF);
+		};
+		return Component.literal(Messages.applyColorCodes(label)).append(Component.literal(state));
+	}
+
 	private static Component debugSyncLabel(boolean enabled) {
 		return labelWithState(Messages.get(Messages.Id.LABEL_SYNC), enabled);
 	}
@@ -790,6 +874,10 @@ public final class PrimeMenuScreen extends Screen {
 
 	private static Component beaconSoundLabel(boolean enabled) {
 		return labelWithState(Messages.get(Messages.Id.LABEL_BEACON_SOUND), enabled);
+	}
+
+	private static Component jackpotSoundLabel(boolean enabled) {
+		return labelWithState(Messages.get(Messages.Id.LABEL_JACKPOT_SOUND), enabled);
 	}
 
 	private static Component noAccessLabel() {
@@ -834,7 +922,10 @@ public final class PrimeMenuScreen extends Screen {
 			InventoryEffectsState.isEnabled(),
 			HudEffectsState.isEnabled(),
 			ClanTagState.isEnabled(),
-			BeaconSoundState.isEnabled()
+			BeaconSoundState.isEnabled(),
+			JackpotSoundState.isEnabled(),
+			DoubleDropState.toConfigValue(DoubleDropState.getMode()),
+			Math.round(SoundPlayer.getWarningVolume() * 100.0f)
 		));
 	}
 
@@ -1710,6 +1801,21 @@ public final class PrimeMenuScreen extends Screen {
 		return Tooltip.create(Component.literal(Messages.applyColorCodes(normalized)));
 	}
 
+	private static Tooltip tooltipWithKey(String text, KeyMapping key) {
+		if (text == null || text.isEmpty()) {
+			return Tooltip.create(Component.empty());
+		}
+		String keyName = PrimeToolerKeyBindings.keyName(key);
+		if (keyName.isEmpty()) {
+			return tooltip(text);
+		}
+		String formattedKey = "&8[&f&l" + keyName + "&8]&7";
+		if (text.contains("{KEY}")) {
+			return tooltip(text.replace("{KEY}", formattedKey));
+		}
+		return tooltip(text + " " + formattedKey);
+	}
+
 	private static boolean isFormatCode(char code) {
 		char lower = code >= 'A' && code <= 'Z' ? (char) (code + 32) : code;
 		return (lower >= '0' && lower <= '9')
@@ -1828,6 +1934,7 @@ public final class PrimeMenuScreen extends Screen {
 		}
 	}
 }
+
 
 
 

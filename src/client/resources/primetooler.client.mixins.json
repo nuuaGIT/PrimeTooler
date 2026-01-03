@@ -12,6 +12,7 @@
 		"CameraTypeMixin",
 		"ChatListenerMixin",
 		"DownloadedPackSourceMixin",
+		"DurabilityGuardHudMixin",
 		"GuiGraphicsMixin",
 		"GuiMixin",
 		"HudEffectsMixin",

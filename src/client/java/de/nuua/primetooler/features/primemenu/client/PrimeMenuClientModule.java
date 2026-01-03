@@ -1,17 +1,14 @@
 package de.nuua.primetooler.features.primemenu.client;
 
-import com.mojang.blaze3d.platform.InputConstants;
 import de.nuua.primetooler.core.event.ClientTickEvent;
 import de.nuua.primetooler.core.event.EventBus;
 import de.nuua.primetooler.core.lifecycle.Bootstrap;
 import de.nuua.primetooler.core.lifecycle.Module;
-import de.nuua.primetooler.platform.input.KeyBindingRegistrar;
+import de.nuua.primetooler.platform.input.PrimeToolerKeyBindings;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
-import org.lwjgl.glfw.GLFW;
 
 public final class PrimeMenuClientModule implements Module, ClientTickEvent {
-	private static final String KEY_OPEN_MENU = "key.primetooler.open_menu";
 	private KeyMapping openMenuKey;
 
 	@Override
@@ -25,12 +22,8 @@ public final class PrimeMenuClientModule implements Module, ClientTickEvent {
 
 	@Override
 	public void init(Bootstrap ctx) {
-		openMenuKey = KeyBindingRegistrar.register(
-			KEY_OPEN_MENU,
-			InputConstants.Type.KEYSYM,
-			GLFW.GLFW_KEY_P,
-			KeyMapping.Category.MISC
-		);
+		PrimeToolerKeyBindings.registerAll();
+		openMenuKey = PrimeToolerKeyBindings.openMenuKey();
 		EventBus bus = ctx.get(EventBus.class);
 		bus.register(ClientTickEvent.class, this);
 	}

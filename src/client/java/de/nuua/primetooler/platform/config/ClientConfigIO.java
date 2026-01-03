@@ -33,7 +33,7 @@ public final class ClientConfigIO {
 	private static final String SAVED_SLOTS_FILE = "saved_slots.json";
 	private static final String SAVED_SLOTS_FILE_BIN = "saved_slots.bin";
 	private static final byte[] SETTINGS_MAGIC = new byte[] { 'P', 'T', 'C', '1' };
-	private static final int SETTINGS_VERSION = 3;
+	private static final int SETTINGS_VERSION = 7;
 	private static final byte[] CHAT_MAGIC = new byte[] { 'P', 'T', 'C', '2' };
 	private static final int CHAT_VERSION = 1;
 	private static final byte[] ITEMS_MAGIC = new byte[] { 'P', 'T', 'C', '3' };
@@ -325,7 +325,7 @@ public final class ClientConfigIO {
 					return null;
 				}
 				int version = in.readInt();
-				if (version != 1 && version != 2 && version != SETTINGS_VERSION) {
+				if (version != 1 && version != 2 && version != 4 && version != 5 && version != 6 && version != SETTINGS_VERSION) {
 					return null;
 				}
 				int payloadLength = in.readInt();
@@ -359,9 +359,27 @@ public final class ClientConfigIO {
 						config.hideClanTag = false;
 					}
 					if (version >= 3) {
-						config.muteBeaconSound = payloadIn.readBoolean();
+						config.muteBoosterSound = payloadIn.readBoolean();
 					} else {
-						config.muteBeaconSound = false;
+						config.muteBoosterSound = false;
+					}
+					if (version >= 4) {
+						config.muteJackpotSound = payloadIn.readBoolean();
+					} else {
+						config.muteJackpotSound = false;
+					}
+					if (version == 5) {
+						payloadIn.readBoolean();
+					}
+					if (version >= 6) {
+						config.doubleDropMode = payloadIn.readInt();
+					} else {
+						config.doubleDropMode = 0;
+					}
+					if (version >= 7) {
+						config.warningSoundVolume = payloadIn.readInt();
+					} else {
+						config.warningSoundVolume = 100;
 					}
 					return config;
 				}
@@ -387,7 +405,10 @@ public final class ClientConfigIO {
 				data.writeBoolean(config.inventoryEffects);
 				data.writeBoolean(config.hudEffects);
 				data.writeBoolean(config.hideClanTag);
-				data.writeBoolean(config.muteBeaconSound);
+				data.writeBoolean(config.muteBoosterSound);
+				data.writeBoolean(config.muteJackpotSound);
+				data.writeInt(config.doubleDropMode);
+				data.writeInt(config.warningSoundVolume);
 			}
 			byte[] payload = payloadOut.toByteArray();
 			CRC32 crc32 = new CRC32();

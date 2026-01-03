@@ -1,11 +1,13 @@
 package de.nuua.primetooler.mixin.client;
 
 import de.nuua.primetooler.features.durabilityguard.client.DurabilityGuardState;
+import de.nuua.primetooler.platform.sound.SoundPlayer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
@@ -14,6 +16,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.BlockHitResult;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -26,6 +29,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  */
 @Mixin(MultiPlayerGameMode.class)
 public class MultiPlayerGameModeMixin {
+	private static final float GUARD_SOUND_VOLUME = 0.5f;
+	private static final float GUARD_SOUND_PITCH = 0.6f;
+	private static final long GUARD_SUPPRESS_MS = 500L;
+
+	@Unique
+	private static long primetooler$lastGuardSoundMs;
 	@Shadow
 	@Final
 	private Minecraft minecraft;
@@ -37,6 +46,7 @@ public class MultiPlayerGameModeMixin {
 			return;
 		}
 		if (DurabilityGuardState.shouldBlock(player.getMainHandItem())) {
+			playGuardSound();
 			cir.setReturnValue(false);
 		}
 	}
@@ -48,6 +58,7 @@ public class MultiPlayerGameModeMixin {
 			return;
 		}
 		if (DurabilityGuardState.shouldBlock(player.getMainHandItem())) {
+			playGuardSound();
 			cir.setReturnValue(false);
 		}
 	}
@@ -59,6 +70,7 @@ public class MultiPlayerGameModeMixin {
 			return;
 		}
 		if (DurabilityGuardState.shouldBlock(player.getMainHandItem())) {
+			playGuardSound();
 			cir.setReturnValue(false);
 		}
 	}
@@ -75,6 +87,7 @@ public class MultiPlayerGameModeMixin {
 		}
 		ItemStack stack = player.getItemInHand(hand);
 		if (DurabilityGuardState.shouldBlock(stack)) {
+			playGuardSound();
 			cir.setReturnValue(InteractionResult.FAIL);
 		}
 	}
@@ -86,6 +99,7 @@ public class MultiPlayerGameModeMixin {
 		}
 		ItemStack stack = player.getItemInHand(hand);
 		if (DurabilityGuardState.shouldBlock(stack)) {
+			playGuardSound();
 			cir.setReturnValue(InteractionResult.FAIL);
 		}
 	}
@@ -98,6 +112,7 @@ public class MultiPlayerGameModeMixin {
 		}
 		ItemStack stack = player.getItemInHand(hand);
 		if (DurabilityGuardState.shouldBlock(stack)) {
+			playGuardSound();
 			cir.setReturnValue(InteractionResult.FAIL);
 		}
 	}
@@ -110,6 +125,7 @@ public class MultiPlayerGameModeMixin {
 		}
 		ItemStack stack = player.getItemInHand(hand);
 		if (DurabilityGuardState.shouldBlock(stack)) {
+			playGuardSound();
 			cir.setReturnValue(InteractionResult.FAIL);
 		}
 	}
@@ -121,7 +137,17 @@ public class MultiPlayerGameModeMixin {
 		}
 		if (DurabilityGuardState.shouldBlock(player.getMainHandItem())
 			|| DurabilityGuardState.shouldBlock(player.getOffhandItem())) {
+			playGuardSound();
 			ci.cancel();
 		}
+	}
+
+	private static void playGuardSound() {
+		long now = System.currentTimeMillis();
+		if (now - primetooler$lastGuardSoundMs < GUARD_SUPPRESS_MS) {
+			return;
+		}
+		primetooler$lastGuardSoundMs = now;
+		SoundPlayer.playWarning(SoundEvents.ANVIL_LAND, GUARD_SOUND_VOLUME, GUARD_SOUND_PITCH);
 	}
 }
