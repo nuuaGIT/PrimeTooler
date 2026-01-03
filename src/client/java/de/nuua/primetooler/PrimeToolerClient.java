@@ -17,6 +17,8 @@ import de.nuua.primetooler.features.primemenu.client.PrimeMenuClientModule;
 import de.nuua.primetooler.features.camerazoom.client.FrontCameraToggleState;
 import de.nuua.primetooler.features.playermark.client.SpecialNamesState;
 import de.nuua.primetooler.features.playermark.client.PlayerMarkRegistry;
+import de.nuua.primetooler.features.playermark.client.ClanTagState;
+import de.nuua.primetooler.features.sound.client.BeaconSoundState;
 import de.nuua.primetooler.platform.config.ClientConfigIO;
 import de.nuua.primetooler.platform.PlatformEnvironment;
 import de.nuua.primetooler.platform.event.FabricClientTickBridge;
@@ -39,6 +41,8 @@ public class PrimeToolerClient implements ClientModInitializer {
 		FrontCameraToggleState.setDisabled(settings.disableFrontCamera);
 		InventoryEffectsState.setEnabled(settings.inventoryEffects);
 		HudEffectsState.setEnabled(settings.hudEffects);
+		ClanTagState.setEnabled(settings.hideClanTag);
+		BeaconSoundState.setEnabled(settings.muteBeaconSound);
 		if (settings.blockServerPacks) {
 			ResourcePackGuardState.applyClientState(true);
 		}

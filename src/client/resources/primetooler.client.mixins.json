@@ -23,9 +23,8 @@
 		"MultiPlayerGameModeMixin",
 		"MouseHandlerMixin",
 		"PlayerTabOverlayMixin",
-		"ScrollableLayoutAccessor",
-		"ScrollableLayoutContainerAccessor",
 		"ScreenAccessor",
+		"SoundEngineMixin",
 		"TitleScreenMixin"
 	],
 	"injectors": {

@@ -16,6 +16,8 @@ public final class ClientSettingsConfig {
 	public boolean disableFrontCamera;
 	public boolean inventoryEffects = true;
 	public boolean hudEffects = true;
+	public boolean hideClanTag;
+	public boolean muteBeaconSound;
 
 	public ClientSettingsConfig() {
 	}
@@ -31,7 +33,9 @@ public final class ClientSettingsConfig {
 		boolean specialNames,
 		boolean disableFrontCamera,
 		boolean inventoryEffects,
-		boolean hudEffects
+		boolean hudEffects,
+		boolean hideClanTag,
+		boolean muteBeaconSound
 	) {
 		this.unlimitedZoom = unlimitedZoom;
 		this.durabilityGuard = durabilityGuard;
@@ -44,5 +48,7 @@ public final class ClientSettingsConfig {
 		this.disableFrontCamera = disableFrontCamera;
 		this.inventoryEffects = inventoryEffects;
 		this.hudEffects = hudEffects;
+		this.hideClanTag = hideClanTag;
+		this.muteBeaconSound = muteBeaconSound;
 	}
 }

@@ -15,6 +15,10 @@ public final class Messages {
 		CONFIG_DESC_1,
 		CONFIG_DESC_2,
 		CONFIG_DESC_3,
+		CONFIG_SEARCH_HINT,
+		CONFIG_SECTION_GAMEPLAY,
+		CONFIG_SECTION_VISUAL,
+		CONFIG_SECTION_SOUND,
 		CHAT_TITLE,
 		CHAT_DESC_1,
 		CHAT_DESC_2,
@@ -43,9 +47,11 @@ public final class Messages {
 		LABEL_SYNC,
 		LABEL_AUTOSPAWN,
 		LABEL_SPECIALNAMES,
+		LABEL_CLANTAG,
 		LABEL_FRONTCAM,
 		LABEL_EFFECTS,
 		LABEL_HUDEFFECTS,
+		LABEL_BEACON_SOUND,
 		LABEL_NO_ACCESS,
 		TOOLTIP_LOCKED,
 		TOOLTIP_ZOOM,
@@ -57,9 +63,11 @@ public final class Messages {
 		TOOLTIP_SYNC,
 		TOOLTIP_AUTOSPAWN,
 		TOOLTIP_SPECIALNAMES,
+		TOOLTIP_CLANTAG,
 		TOOLTIP_FRONTCAM,
 		TOOLTIP_EFFECTS,
 		TOOLTIP_HUDEFFECTS,
+		TOOLTIP_BEACON_SOUND,
 		TOOLTIP_MSG,
 		TOOLTIP_ADD,
 		TOOLTIP_ADDONLY,
@@ -113,6 +121,10 @@ public final class Messages {
 			case CONFIG_DESC_1 -> "Schalte PrimeTooler-Funktionen und Client-Helper";
 			case CONFIG_DESC_2 -> "ein oder aus. Änderungen wirken sofort";
 			case CONFIG_DESC_3 -> "und werden lokal gespeichert.";
+			case CONFIG_SEARCH_HINT -> "&7Suche...";
+			case CONFIG_SECTION_GAMEPLAY -> "&lSpiel";
+			case CONFIG_SECTION_VISUAL -> "&lVisuell";
+			case CONFIG_SECTION_SOUND -> "&lTon";
 			case CHAT_TITLE -> "&lCHAT NACHRICHTEN";
 			case CHAT_DESC_1 -> "Schnelle Presets für Chat-Nachrichten zum Bearbeiten und Senden.";
 			case CHAT_DESC_2 ->
@@ -142,9 +154,11 @@ public final class Messages {
 			case LABEL_SYNC -> "Item-Sync Debug: ";
 			case LABEL_AUTOSPAWN -> "Auto /plot home (wenig Leben): ";
 			case LABEL_SPECIALNAMES -> "Spezielle Namen: ";
+			case LABEL_CLANTAG -> "Clan-Tag ausblenden: ";
 			case LABEL_FRONTCAM -> "Frontkamera: ";
 			case LABEL_EFFECTS -> "Effekte im Inventar: ";
 			case LABEL_HUDEFFECTS -> "Effekte im HUD: ";
+			case LABEL_BEACON_SOUND -> "Beacon-Sound stummschalten: ";
 			case LABEL_NO_ACCESS -> "&8&oGesperrt";
 			case TOOLTIP_ZOOM ->
 				"&7Schaltet &f&lUnbegrenzter Zoom&7.";
@@ -170,6 +184,11 @@ public final class Messages {
 			case TOOLTIP_SPECIALNAMES ->
 				"&7Schaltet &f&lSpezielle Namen&7 Styling um. &8• &7"
 					+ "&7Gilt für &f&lTab & Nametags&7.";
+			case TOOLTIP_CLANTAG ->
+				"&7Entfernt &f&lClan-Tags&7 in Tab & Nametag. &8• &7"
+					+ "&7Nur auf &f&lMultiplayer-Servern&7 aktiv.";
+			case TOOLTIP_BEACON_SOUND ->
+				"&7Unterdrückt den &f&lBeacon-Aktivieren&7 Sound bei Boostern.";
 			case TOOLTIP_FRONTCAM ->
 				"&7Deaktiviert die &f&lFrontkamera&7 im F5. &8• &7"
 					+ "&7Wechselt nur zwischen &f&lEgo-Perspektive&7 und &f&lRückansicht&7.";

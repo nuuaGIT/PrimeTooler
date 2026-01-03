@@ -9,6 +9,8 @@ import de.nuua.primetooler.api.v1.client.text.RainbowTextStyle;
 import de.nuua.primetooler.features.checkitem.client.CheckItemClientModule;
 import de.nuua.primetooler.features.playermark.client.PlayerMarkRegistry;
 import de.nuua.primetooler.features.playermark.client.SpecialNamesState;
+import de.nuua.primetooler.features.playermark.client.ClanTagState;
+import de.nuua.primetooler.features.sound.client.BeaconSoundState;
 import de.nuua.primetooler.features.camerazoom.client.FrontCameraToggleState;
 import de.nuua.primetooler.features.camerazoom.client.CameraZoomState;
 import de.nuua.primetooler.features.durabilityguard.client.DurabilityGuardState;
@@ -17,8 +19,6 @@ import de.nuua.primetooler.features.inventoryeffects.client.InventoryEffectsStat
 import de.nuua.primetooler.features.inventoryeffects.client.HudEffectsState;
 import de.nuua.primetooler.features.locatorbar.client.LocatorBarState;
 import de.nuua.primetooler.features.resourcepackguard.client.ResourcePackGuardState;
-import de.nuua.primetooler.mixin.client.ScrollableLayoutAccessor;
-import de.nuua.primetooler.mixin.client.ScrollableLayoutContainerAccessor;
 import de.nuua.primetooler.platform.config.ClientConfigIO;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -96,6 +96,7 @@ public final class PrimeMenuScreen extends Screen {
 	private TabManager tabManager;
 	private TabNavigationBar tabNavigationBar;
 	private int headerHeight;
+	private PrimeMenuHomeTab homeTab;
 	private ChatToolsTab chatToolsTab;
 	private SpecialMembersTab specialMembersTab;
 	private Tab lastTab;
@@ -110,11 +111,12 @@ public final class PrimeMenuScreen extends Screen {
 		tabManager = new TabManager(this::addTabWidget, this::removeWidget);
 		boolean specialAccess = PlayerMarkRegistry.isAuthorizedUser();
 		int maxMessages = getChatMessagesMax(specialAccess);
+		homeTab = new PrimeMenuHomeTab(this::addTabWidget, this::removeWidget);
 		chatToolsTab = new ChatToolsTab(ClientConfigIO.loadChatInputs(maxMessages), maxMessages, specialAccess);
 		specialMembersTab = new SpecialMembersTab();
 		tabNavigationBar = TabNavigationBar.builder(tabManager, width)
 			.addTabs(
-				new PrimeMenuHomeTab(),
+				homeTab,
 				chatToolsTab,
 				specialMembersTab
 			)
@@ -156,6 +158,12 @@ public final class PrimeMenuScreen extends Screen {
 			Tab current = tabManager.getCurrentTab();
 			if (current != lastTab && lastTab == chatToolsTab && chatToolsTab != null) {
 				chatToolsTab.resetUi();
+			}
+			if (current != lastTab && lastTab == homeTab && homeTab != null) {
+				homeTab.setActive(false);
+			}
+			if (current != lastTab && current == homeTab && homeTab != null) {
+				homeTab.setActive(true);
 			}
 			lastTab = current;
 		}
@@ -252,53 +260,94 @@ public final class PrimeMenuScreen extends Screen {
 		}
 	}
 
-	private static final class PrimeMenuHomeTab extends GridLayoutTab {
+	private static final class PrimeMenuHomeTab implements Tab {
+		private static final String SECTION_SEARCH_GAMEPLAY = normalizeSearchText(Messages.get(Messages.Id.CONFIG_SECTION_GAMEPLAY));
+		private static final String SECTION_SEARCH_VISUAL = normalizeSearchText(Messages.get(Messages.Id.CONFIG_SECTION_VISUAL));
+		private static final String SECTION_SEARCH_SOUND = normalizeSearchText(Messages.get(Messages.Id.CONFIG_SECTION_SOUND));
 
-		private PrimeMenuHomeTab() {
-			super(Component.literal(Messages.get(Messages.Id.TAB_CONFIG)));
-			layout.rowSpacing(3);
-			layout.columnSpacing(12);
+		private final Component title = Component.literal(Messages.get(Messages.Id.TAB_CONFIG));
+		private final java.util.function.Consumer<AbstractWidget> addWidget;
+		private final java.util.function.Consumer<AbstractWidget> removeWidget;
+		private boolean active;
+		private final Minecraft client;
+		private GridLayout contentLayout;
+		private ScrollableLayout scrollLayout;
+		private ScreenRectangle lastArea;
+		private final java.util.List<ButtonEntry> gameplayEntries = new java.util.ArrayList<>();
+		private final java.util.List<ButtonEntry> visualEntries = new java.util.ArrayList<>();
+		private final java.util.List<ButtonEntry> soundEntries = new java.util.ArrayList<>();
+		private final StringWidget header;
+		private final StringWidget desc1;
+		private final StringWidget desc2;
+		private final StringWidget desc3;
+		private final StringWidget gameplayHeader;
+		private final StringWidget visualHeader;
+		private final StringWidget soundHeader;
+		private final EditBox searchBox;
 
-			Minecraft client = Minecraft.getInstance();
+		private PrimeMenuHomeTab(
+			java.util.function.Consumer<AbstractWidget> addWidget,
+			java.util.function.Consumer<AbstractWidget> removeWidget
+		) {
+			this.addWidget = addWidget;
+			this.removeWidget = removeWidget;
+			client = Minecraft.getInstance();
+
 			boolean specialAccess = PlayerMarkRegistry.isAuthorizedUser();
-			int row = 0;
-			StringWidget header = new StringWidget(
+			header = new StringWidget(
 				CONFIG_LAYOUT_WIDTH,
 				CONFIG_LABEL_HEIGHT,
 				Component.literal(translateColorCodes(Messages.get(Messages.Id.CONFIG_TITLE))),
 				client.font
 			);
 			header.setColor(0xFFE6E6E6);
-			layout.addChild(header, row++, 0, 1, 2, settings -> settings.alignHorizontallyCenter());
 
-			StringWidget desc1 = new StringWidget(
+			desc1 = new StringWidget(
 				CONFIG_LAYOUT_WIDTH,
 				CONFIG_LABEL_HEIGHT,
 				Component.literal(translateColorCodes(Messages.get(Messages.Id.CONFIG_DESC_1))),
 				client.font
 			);
 			desc1.setColor(0xFFB8B8B8);
-			layout.addChild(desc1, row++, 0, 1, 2, settings -> settings.alignHorizontallyCenter());
 
-			StringWidget desc2 = new StringWidget(
+			desc2 = new StringWidget(
 				CONFIG_LAYOUT_WIDTH,
 				CONFIG_LABEL_HEIGHT,
 				Component.literal(translateColorCodes(Messages.get(Messages.Id.CONFIG_DESC_2))),
 				client.font
 			);
 			desc2.setColor(0xFFB8B8B8);
-			layout.addChild(desc2, row++, 0, 1, 2, settings -> settings.alignHorizontallyCenter());
 
-			StringWidget desc3 = new StringWidget(
+			desc3 = new StringWidget(
 				CONFIG_LAYOUT_WIDTH,
 				CONFIG_LABEL_HEIGHT,
 				Component.literal(translateColorCodes(Messages.get(Messages.Id.CONFIG_DESC_3))),
 				client.font
 			);
 			desc3.setColor(0xFFB8B8B8);
-			layout.addChild(desc3, row++, 0, 1, 2, settings -> settings.alignHorizontallyCenter());
 
-			layout.addChild(new SimpleSpacerWidget(CONFIG_LAYOUT_WIDTH, 4), row++, 0, 1, 2);
+			searchBox = new EditBox(
+				client.font,
+				0,
+				0,
+				CONFIG_LAYOUT_WIDTH,
+				18,
+				Component.empty()
+			);
+			searchBox.setMaxLength(64);
+			searchBox.setHint(
+				Component.literal(translateColorCodes(Messages.get(Messages.Id.CONFIG_SEARCH_HINT)))
+					.withStyle(ChatFormatting.GRAY)
+			);
+			searchBox.setResponder(this::applySearch);
+
+			gameplayHeader = new StringWidget(
+				CONFIG_LAYOUT_WIDTH,
+				CONFIG_LABEL_HEIGHT,
+				Component.literal(translateColorCodes(Messages.get(Messages.Id.CONFIG_SECTION_GAMEPLAY))),
+				client.font
+			);
+			gameplayHeader.setColor(0xFFE6E6E6);
 
 			Button[] toggleRef = new Button[1];
 			toggleRef[0] = Button.builder(zoomLabel(CameraZoomState.isEnabled()), button -> {
@@ -315,7 +364,7 @@ public final class PrimeMenuScreen extends Screen {
 				toggleRef[0].setMessage(noAccessLabel());
 				toggleRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_LOCKED)));
 			}
-			layout.addChild(toggleRef[0], row + 0, 0);
+			gameplayEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_ZOOM), toggleRef[0]));
 
 			Button[] durabilityRef = new Button[1];
 			durabilityRef[0] = Button.builder(durabilityLabel(DurabilityGuardState.isEnabled()), button -> {
@@ -324,7 +373,7 @@ public final class PrimeMenuScreen extends Screen {
 				saveClientSettings();
 			}).size(CONFIG_BUTTON_WIDTH, BUTTON_HEIGHT).build();
 			durabilityRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_DURABILITY)));
-			layout.addChild(durabilityRef[0], row + 0, 1);
+			gameplayEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_DURABILITY), durabilityRef[0]));
 
 			Button[] calculatorRef = new Button[1];
 			calculatorRef[0] = Button.builder(calculatorLabel(InventoryCalculatorState.isEnabled()), button -> {
@@ -333,7 +382,7 @@ public final class PrimeMenuScreen extends Screen {
 				saveClientSettings();
 			}).size(CONFIG_BUTTON_WIDTH, BUTTON_HEIGHT).build();
 			calculatorRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_CALC)));
-			layout.addChild(calculatorRef[0], row + 1, 0);
+			gameplayEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_CALC), calculatorRef[0]));
 
 			Button[] packGuardRef = new Button[1];
 			packGuardRef[0] = Button.builder(packGuardLabel(ResourcePackGuardState.isEnabled()), button -> {
@@ -343,7 +392,7 @@ public final class PrimeMenuScreen extends Screen {
 				saveClientSettings();
 			}).size(CONFIG_BUTTON_WIDTH, BUTTON_HEIGHT).build();
 			packGuardRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_PACK)));
-			layout.addChild(packGuardRef[0], row + 1, 1);
+			gameplayEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_PACK), packGuardRef[0]));
 
 			Button[] locatorRef = new Button[1];
 			locatorRef[0] = Button.builder(locatorLabel(LocatorBarState.isEnabled()), button -> {
@@ -352,7 +401,7 @@ public final class PrimeMenuScreen extends Screen {
 				saveClientSettings();
 			}).size(CONFIG_BUTTON_WIDTH, BUTTON_HEIGHT).build();
 			locatorRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_LOCATOR)));
-			layout.addChild(locatorRef[0], row + 2, 0);
+			gameplayEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_LOCATOR), locatorRef[0]));
 
 			Button[] slotLockRef = new Button[1];
 			slotLockRef[0] = Button.builder(slotLockLabel(CheckItemClientModule.isSlotLockingEnabled()), button -> {
@@ -361,7 +410,7 @@ public final class PrimeMenuScreen extends Screen {
 				saveClientSettings();
 			}).size(CONFIG_BUTTON_WIDTH, BUTTON_HEIGHT).build();
 			slotLockRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_SLOTLOCK)));
-			layout.addChild(slotLockRef[0], row + 2, 1);
+			gameplayEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_SLOTLOCK), slotLockRef[0]));
 
 			Button[] syncDebugRef = new Button[1];
 			syncDebugRef[0] = Button.builder(debugSyncLabel(CheckItemClientModule.isDebugSyncEnabled()), button -> {
@@ -369,7 +418,7 @@ public final class PrimeMenuScreen extends Screen {
 				syncDebugRef[0].setMessage(debugSyncLabel(enabled));
 			}).size(CONFIG_BUTTON_WIDTH, BUTTON_HEIGHT).build();
 			syncDebugRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_SYNC)));
-			layout.addChild(syncDebugRef[0], row + 3, 0);
+			gameplayEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_SYNC), syncDebugRef[0]));
 
 			Button[] autoSpawnRef = new Button[1];
 			autoSpawnRef[0] = Button.builder(autoSpawnLabel(AutoSpawnState.isEnabled()), button -> {
@@ -386,7 +435,15 @@ public final class PrimeMenuScreen extends Screen {
 				autoSpawnRef[0].setMessage(noAccessLabel());
 				autoSpawnRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_LOCKED)));
 			}
-			layout.addChild(autoSpawnRef[0], row + 3, 1);
+			gameplayEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_AUTOSPAWN), autoSpawnRef[0]));
+
+			visualHeader = new StringWidget(
+				CONFIG_LAYOUT_WIDTH,
+				CONFIG_LABEL_HEIGHT,
+				Component.literal(translateColorCodes(Messages.get(Messages.Id.CONFIG_SECTION_VISUAL))),
+				client.font
+			);
+			visualHeader.setColor(0xFFE6E6E6);
 
 			Button[] specialNamesRef = new Button[1];
 			specialNamesRef[0] = Button.builder(specialNamesLabel(SpecialNamesState.isEnabled()), button -> {
@@ -395,7 +452,16 @@ public final class PrimeMenuScreen extends Screen {
 				saveClientSettings();
 			}).size(CONFIG_BUTTON_WIDTH, BUTTON_HEIGHT).build();
 			specialNamesRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_SPECIALNAMES)));
-			layout.addChild(specialNamesRef[0], row + 4, 0);
+			visualEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_SPECIALNAMES), specialNamesRef[0]));
+
+			Button[] clanTagRef = new Button[1];
+			clanTagRef[0] = Button.builder(clanTagLabel(ClanTagState.isEnabled()), button -> {
+				boolean enabled = ClanTagState.toggleEnabled();
+				clanTagRef[0].setMessage(clanTagLabel(enabled));
+				saveClientSettings();
+			}).size(CONFIG_BUTTON_WIDTH, BUTTON_HEIGHT).build();
+			clanTagRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_CLANTAG)));
+			visualEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_CLANTAG), clanTagRef[0]));
 
 			Button[] frontCameraRef = new Button[1];
 			frontCameraRef[0] = Button.builder(frontCameraLabel(FrontCameraToggleState.isDisabled()), button -> {
@@ -404,7 +470,7 @@ public final class PrimeMenuScreen extends Screen {
 				saveClientSettings();
 			}).size(CONFIG_BUTTON_WIDTH, BUTTON_HEIGHT).build();
 			frontCameraRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_FRONTCAM)));
-			layout.addChild(frontCameraRef[0], row + 4, 1);
+			visualEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_FRONTCAM), frontCameraRef[0]));
 
 			Button[] inventoryEffectsRef = new Button[1];
 			inventoryEffectsRef[0] = Button.builder(inventoryEffectsLabel(InventoryEffectsState.isEnabled()), button -> {
@@ -413,7 +479,7 @@ public final class PrimeMenuScreen extends Screen {
 				saveClientSettings();
 			}).size(CONFIG_BUTTON_WIDTH, BUTTON_HEIGHT).build();
 			inventoryEffectsRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_EFFECTS)));
-			layout.addChild(inventoryEffectsRef[0], row + 5, 0);
+			visualEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_EFFECTS), inventoryEffectsRef[0]));
 
 			Button[] hudEffectsRef = new Button[1];
 			hudEffectsRef[0] = Button.builder(hudEffectsLabel(HudEffectsState.isEnabled()), button -> {
@@ -422,16 +488,246 @@ public final class PrimeMenuScreen extends Screen {
 				saveClientSettings();
 			}).size(CONFIG_BUTTON_WIDTH, BUTTON_HEIGHT).build();
 			hudEffectsRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_HUDEFFECTS)));
-			layout.addChild(hudEffectsRef[0], row + 5, 1);
+			visualEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_HUDEFFECTS), hudEffectsRef[0]));
+
+			soundHeader = new StringWidget(
+				CONFIG_LAYOUT_WIDTH,
+				CONFIG_LABEL_HEIGHT,
+				Component.literal(translateColorCodes(Messages.get(Messages.Id.CONFIG_SECTION_SOUND))),
+				client.font
+			);
+			soundHeader.setColor(0xFFE6E6E6);
+
+			Button[] beaconSoundRef = new Button[1];
+			beaconSoundRef[0] = Button.builder(beaconSoundLabel(BeaconSoundState.isEnabled()), button -> {
+				boolean enabled = BeaconSoundState.toggleEnabled();
+				beaconSoundRef[0].setMessage(beaconSoundLabel(enabled));
+				saveClientSettings();
+			}).size(CONFIG_BUTTON_WIDTH, BUTTON_HEIGHT).build();
+			beaconSoundRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_BEACON_SOUND)));
+			soundEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_BEACON_SOUND), beaconSoundRef[0]));
+
+			rebuildContentLayout("");
+		}
+
+		private static final class ButtonEntry {
+			private final String label;
+			private final Button button;
+
+			private ButtonEntry(String label, Button button) {
+				this.label = label == null ? "" : label;
+				this.button = button;
+			}
+		}
+
+		private static int addSection(GridLayout layout, StringWidget header,
+			java.util.List<ButtonEntry> entries, int row, String query, boolean showAll) {
+			sortEntries(entries);
+			java.util.List<ButtonEntry> visible = new java.util.ArrayList<>();
+			int col = 0;
+			for (int i = 0; i < entries.size(); i++) {
+				ButtonEntry entry = entries.get(i);
+				boolean match = query.isEmpty()
+					|| showAll
+					|| normalizeSearchText(entry.label).contains(query);
+				entry.button.visible = match;
+				if (match) {
+					visible.add(entry);
+				}
+			}
+			if (visible.isEmpty()) {
+				header.visible = false;
+				return row;
+			}
+			header.visible = true;
+			layout.addChild(header, row++, 0, 1, 2, settings -> settings.alignHorizontallyCenter());
+			for (int i = 0; i < visible.size(); i++) {
+				ButtonEntry entry = visible.get(i);
+				layout.addChild(entry.button, row, col);
+				col++;
+				if (col >= 2) {
+					col = 0;
+					row++;
+				}
+			}
+			if (col > 0) {
+				row++;
+			}
+			return row;
+		}
+
+		private static void sortEntries(java.util.List<ButtonEntry> entries) {
+			entries.sort((a, b) -> {
+				String la = a.label.toLowerCase(java.util.Locale.ROOT);
+				String lb = b.label.toLowerCase(java.util.Locale.ROOT);
+				int cmp = la.compareTo(lb);
+				return cmp != 0 ? cmp : a.label.compareTo(b.label);
+			});
+		}
+
+		private void applySearch(String query) {
+			String q = normalizeSearchText(query);
+			rebuildContentLayout(q);
+			ScrollableReflection.scrollToTop(scrollLayout);
+			if (lastArea != null) {
+				doLayout(lastArea);
+			} else {
+				scrollLayout.arrangeElements();
+			}
+		}
+
+		private void setActive(boolean active) {
+			this.active = active;
+			if (active) {
+				header.visible = true;
+				desc1.visible = true;
+				desc2.visible = true;
+				desc3.visible = true;
+				searchBox.visible = true;
+				applySearch(searchBox.getValue());
+				return;
+			}
+			searchBox.setFocused(false);
+			header.visible = false;
+			desc1.visible = false;
+			desc2.visible = false;
+			desc3.visible = false;
+			searchBox.visible = false;
+			gameplayHeader.visible = false;
+			visualHeader.visible = false;
+			soundHeader.visible = false;
+			for (int i = 0; i < gameplayEntries.size(); i++) {
+				gameplayEntries.get(i).button.visible = false;
+			}
+			for (int i = 0; i < visualEntries.size(); i++) {
+				visualEntries.get(i).button.visible = false;
+			}
+			for (int i = 0; i < soundEntries.size(); i++) {
+				soundEntries.get(i).button.visible = false;
+			}
+		}
+
+		private static final class ScrollableReflection {
+			private static java.lang.reflect.Field containerField;
+			private static java.lang.reflect.Method setScrollAmount;
+			private static boolean initialized;
+
+			private static void scrollToTop(ScrollableLayout layout) {
+				if (layout == null) {
+					return;
+				}
+				if (!initialized) {
+					initialized = true;
+					try {
+						containerField = ScrollableLayout.class.getDeclaredField("container");
+						containerField.setAccessible(true);
+						Class<?> containerClass =
+							Class.forName("net.minecraft.client.gui.components.ScrollableLayout$Container");
+						setScrollAmount = containerClass.getDeclaredMethod("setScrollAmount", double.class);
+						setScrollAmount.setAccessible(true);
+					} catch (ReflectiveOperationException ignored) {
+						containerField = null;
+						setScrollAmount = null;
+						return;
+					}
+				}
+				if (containerField == null || setScrollAmount == null) {
+					return;
+				}
+				try {
+					Object container = containerField.get(layout);
+					if (container != null) {
+						setScrollAmount.invoke(container, 0.0d);
+					}
+				} catch (ReflectiveOperationException ignored) {
+					// Safe fallback: skip scrolling if reflection fails.
+				}
+			}
+		}
+
+		private void rebuildContentLayout(String query) {
+			ScrollableLayout previousScroll = scrollLayout;
+			String q = normalizeSearchText(query);
+			header.visible = true;
+			desc1.visible = true;
+			desc2.visible = true;
+			desc3.visible = true;
+			searchBox.visible = true;
+			GridLayout layout = new GridLayout();
+			layout.rowSpacing(3);
+			layout.columnSpacing(12);
+			int row = 0;
+			layout.addChild(header, row++, 0, 1, 2, settings -> settings.alignHorizontallyCenter());
+			layout.addChild(desc1, row++, 0, 1, 2, settings -> settings.alignHorizontallyCenter());
+			layout.addChild(desc2, row++, 0, 1, 2, settings -> settings.alignHorizontallyCenter());
+			layout.addChild(desc3, row++, 0, 1, 2, settings -> settings.alignHorizontallyCenter());
+			layout.addChild(searchBox, row++, 0, 1, 2);
+			layout.addChild(new SimpleSpacerWidget(CONFIG_LAYOUT_WIDTH, 4), row++, 0, 1, 2);
+
+			boolean gameplayAll = !q.isEmpty() && SECTION_SEARCH_GAMEPLAY.contains(q);
+			boolean visualAll = !q.isEmpty() && SECTION_SEARCH_VISUAL.contains(q);
+			boolean soundAll = !q.isEmpty() && SECTION_SEARCH_SOUND.contains(q);
+
+			int before = row;
+			row = addSection(layout, gameplayHeader, gameplayEntries, row, q, gameplayAll);
+			if (row != before) {
+				layout.addChild(new SimpleSpacerWidget(CONFIG_LAYOUT_WIDTH, 4), row++, 0, 1, 2);
+			}
+			before = row;
+			row = addSection(layout, visualHeader, visualEntries, row, q, visualAll);
+			if (row != before) {
+				layout.addChild(new SimpleSpacerWidget(CONFIG_LAYOUT_WIDTH, 4), row++, 0, 1, 2);
+			}
+			addSection(layout, soundHeader, soundEntries, row, q, soundAll);
+
+			contentLayout = layout;
+			scrollLayout = new ScrollableLayout(client, contentLayout, 0);
+			if (active) {
+				if (previousScroll != null) {
+					previousScroll.visitChildren(element -> {
+						if (element instanceof AbstractWidget widget) {
+							removeWidget.accept(widget);
+						}
+					});
+				}
+				scrollLayout.visitChildren(element -> {
+					if (element instanceof AbstractWidget widget) {
+						addWidget.accept(widget);
+					}
+				});
+			}
+		}
+
+		@Override
+		public Component getTabTitle() {
+			return title;
+		}
+
+		@Override
+		public Component getTabExtraNarration() {
+			return Component.empty();
+		}
+
+		@Override
+		public void visitChildren(java.util.function.Consumer<AbstractWidget> consumer) {
+			scrollLayout.visitChildren(element -> {
+				if (element instanceof AbstractWidget widget) {
+					consumer.accept(widget);
+				}
+			});
 		}
 
 		@Override
 		public void doLayout(ScreenRectangle area) {
+			lastArea = area;
 			int x = area.left() + Math.max(0, (area.width() - CONFIG_LAYOUT_WIDTH) / 2);
-			layout.setX(x);
-			layout.setY(area.top());
-			layout.arrangeElements();
+			scrollLayout.setX(x);
+			scrollLayout.setY(area.top());
+			scrollLayout.setMinWidth(CONFIG_LAYOUT_WIDTH);
+			scrollLayout.setMaxHeight(area.height());
+			scrollLayout.arrangeElements();
 		}
+	}
 
 	private static Component zoomLabel(boolean enabled) {
 		return labelWithState(Messages.get(Messages.Id.LABEL_ZOOM), enabled);
@@ -469,6 +765,10 @@ public final class PrimeMenuScreen extends Screen {
 		return labelWithState(Messages.get(Messages.Id.LABEL_SPECIALNAMES), enabled);
 	}
 
+	private static Component clanTagLabel(boolean enabled) {
+		return labelWithState(Messages.get(Messages.Id.LABEL_CLANTAG), enabled);
+	}
+
 	private static Component frontCameraLabel(boolean disabled) {
 		return labelWithState(Messages.get(Messages.Id.LABEL_FRONTCAM), !disabled);
 	}
@@ -479,6 +779,10 @@ public final class PrimeMenuScreen extends Screen {
 
 	private static Component hudEffectsLabel(boolean enabled) {
 		return labelWithState(Messages.get(Messages.Id.LABEL_HUDEFFECTS), enabled);
+	}
+
+	private static Component beaconSoundLabel(boolean enabled) {
+		return labelWithState(Messages.get(Messages.Id.LABEL_BEACON_SOUND), enabled);
 	}
 
 	private static Component noAccessLabel() {
@@ -493,21 +797,38 @@ public final class PrimeMenuScreen extends Screen {
 		return base.append(state);
 	}
 
-		private static void saveClientSettings() {
-			ClientConfigIO.saveClientSettings(new ClientSettingsConfig(
-				CameraZoomState.isEnabled(),
-				DurabilityGuardState.isEnabled(),
-				InventoryCalculatorState.isEnabled(),
-				ResourcePackGuardState.isEnabled(),
-				LocatorBarState.isEnabled(),
-				CheckItemClientModule.isSlotLockingEnabled(),
-				AutoSpawnState.isEnabled(),
-				SpecialNamesState.isEnabled(),
-				FrontCameraToggleState.isDisabled(),
-				InventoryEffectsState.isEnabled(),
-				HudEffectsState.isEnabled()
-			));
+	private static String normalizeSearchText(String value) {
+		if (value == null || value.isBlank()) {
+			return "";
 		}
+		StringBuilder out = new StringBuilder(value.length());
+		for (int i = 0; i < value.length(); i++) {
+			char ch = value.charAt(i);
+			if ((ch == '&' || ch == '\u00A7') && i + 1 < value.length()) {
+				i++;
+				continue;
+			}
+			out.append(ch);
+		}
+		return out.toString().trim().toLowerCase(java.util.Locale.ROOT);
+	}
+
+	private static void saveClientSettings() {
+		ClientConfigIO.saveClientSettings(new ClientSettingsConfig(
+			CameraZoomState.isEnabled(),
+			DurabilityGuardState.isEnabled(),
+			InventoryCalculatorState.isEnabled(),
+			ResourcePackGuardState.isEnabled(),
+			LocatorBarState.isEnabled(),
+			CheckItemClientModule.isSlotLockingEnabled(),
+			AutoSpawnState.isEnabled(),
+			SpecialNamesState.isEnabled(),
+			FrontCameraToggleState.isDisabled(),
+			InventoryEffectsState.isEnabled(),
+			HudEffectsState.isEnabled(),
+			ClanTagState.isEnabled(),
+			BeaconSoundState.isEnabled()
+		));
 	}
 
 	private static final class ChatToolsTab implements Tab {
@@ -515,13 +836,7 @@ public final class PrimeMenuScreen extends Screen {
 		private final GridLayout contentLayout = new GridLayout();
 		private final GridLayout controlsLayout = new GridLayout();
 		private final GridLayout messagesLayout = new GridLayout();
-		private final ScrollableLayout scrollLayout;
-		private boolean scrollEnabled;
-		private int areaLeft;
-		private int areaTop;
-		private int areaWidth;
-		private int areaHeight;
-		private boolean areaValid;
+		private ScreenRectangle lastArea;
 		private final int maxMessages;
 		private final boolean specialAccess;
 		private final Button[] messageButtons;
@@ -671,7 +986,6 @@ public final class PrimeMenuScreen extends Screen {
 
 			contentLayout.addChild(controlsLayout, row++, 0);
 			contentLayout.addChild(messagesLayout, row, 0);
-			scrollLayout = new ScrollableLayout(client, contentLayout, 0);
 			setAdding(false);
 			setEditing(false);
 		}
@@ -688,7 +1002,7 @@ public final class PrimeMenuScreen extends Screen {
 
 		@Override
 		public void visitChildren(java.util.function.Consumer<AbstractWidget> consumer) {
-			scrollLayout.visitChildren(element -> {
+			contentLayout.visitChildren(element -> {
 				if (element instanceof AbstractWidget widget) {
 					consumer.accept(widget);
 				}
@@ -697,11 +1011,7 @@ public final class PrimeMenuScreen extends Screen {
 
 		@Override
 		public void doLayout(ScreenRectangle area) {
-			areaLeft = area.left();
-			areaTop = area.top();
-			areaWidth = area.width();
-			areaHeight = area.height();
-			areaValid = true;
+			lastArea = area;
 			updateScrollLayout();
 		}
 
@@ -778,10 +1088,7 @@ public final class PrimeMenuScreen extends Screen {
 		}
 
 		private void scrollToTop() {
-			Object container = ((ScrollableLayoutAccessor) (Object) scrollLayout).primetooler$getContainer();
-			if (container instanceof ScrollableLayoutContainerAccessor accessor) {
-				accessor.primetooler$setScrollAmount(0.0);
-			}
+			// No scrolling in this tab.
 		}
 
 		private void sendEditToChat() {
@@ -913,19 +1220,15 @@ public final class PrimeMenuScreen extends Screen {
 		}
 
 		private void updateScrollLayout() {
-			if (!areaValid) {
+			if (lastArea == null) {
 				return;
 			}
-			int x = areaLeft + Math.max(0, (areaWidth - CHAT_LAYOUT_WIDTH) / 2);
+			int x = lastArea.left() + Math.max(0, (lastArea.width() - CHAT_LAYOUT_WIDTH) / 2);
 			contentLayout.setX(x);
-			contentLayout.setY(areaTop);
+			contentLayout.setY(lastArea.top());
+			controlsLayout.arrangeElements();
+			messagesLayout.arrangeElements();
 			contentLayout.arrangeElements();
-			scrollEnabled = true;
-			scrollLayout.setX(x);
-			scrollLayout.setY(areaTop);
-			scrollLayout.setMinWidth(CHAT_LAYOUT_WIDTH);
-			scrollLayout.setMaxHeight(areaHeight);
-			scrollLayout.arrangeElements();
 		}
 
 		private static final class GapWidget extends AbstractWidget {
@@ -1121,6 +1424,9 @@ public final class PrimeMenuScreen extends Screen {
 	private static final class SpecialMembersTab implements Tab {
 		private static final int LIST_WIDTH = 320;
 		private static final int LABEL_HEIGHT = 12;
+		private static final int COLUMN_SPACING = 2;
+		private static final int NAME_COLUMN_WIDTH = (LIST_WIDTH - COLUMN_SPACING) / 2;
+		private static final int RIGHT_COLUMN_INSET = 8;
 		private static final int COLOR_TITLE = 0xFFE6E6E6;
 		private static final int COLOR_SUBTITLE = 0xFFB8B8B8;
 		private static final int COLOR_SECTION = 0xFFFF5555;
@@ -1141,7 +1447,7 @@ public final class PrimeMenuScreen extends Screen {
 		private SpecialMembersTab() {
 			Minecraft client = Minecraft.getInstance();
 			contentLayout.rowSpacing(3);
-			contentLayout.columnSpacing(6);
+			contentLayout.columnSpacing(COLUMN_SPACING);
 
 			int row = 0;
 			StringWidget header = new StringWidget(
@@ -1151,7 +1457,7 @@ public final class PrimeMenuScreen extends Screen {
 				client.font
 			);
 			header.setColor(COLOR_TITLE);
-			contentLayout.addChild(header, row++, 0, settings -> settings.alignHorizontallyCenter());
+			contentLayout.addChild(header, row++, 0, 1, 2, settings -> settings.alignHorizontallyCenter());
 
 			StringWidget desc1 = new StringWidget(
 				LIST_WIDTH,
@@ -1160,7 +1466,7 @@ public final class PrimeMenuScreen extends Screen {
 				client.font
 			);
 			desc1.setColor(COLOR_SUBTITLE);
-			contentLayout.addChild(desc1, row++, 0, settings -> settings.alignHorizontallyCenter());
+			contentLayout.addChild(desc1, row++, 0, 1, 2, settings -> settings.alignHorizontallyCenter());
 
 			StringWidget desc2 = new StringWidget(
 				LIST_WIDTH,
@@ -1169,7 +1475,7 @@ public final class PrimeMenuScreen extends Screen {
 				client.font
 			);
 			desc2.setColor(COLOR_SUBTITLE);
-			contentLayout.addChild(desc2, row++, 0, settings -> settings.alignHorizontallyCenter());
+			contentLayout.addChild(desc2, row++, 0, 1, 2, settings -> settings.alignHorizontallyCenter());
 
 			StringWidget desc3 = new StringWidget(
 				LIST_WIDTH,
@@ -1178,7 +1484,7 @@ public final class PrimeMenuScreen extends Screen {
 				client.font
 			);
 			desc3.setColor(COLOR_SUBTITLE);
-			contentLayout.addChild(desc3, row++, 0, settings -> settings.alignHorizontallyCenter());
+			contentLayout.addChild(desc3, row++, 0, 1, 2, settings -> settings.alignHorizontallyCenter());
 
 			StringWidget desc4 = new StringWidget(
 				LIST_WIDTH,
@@ -1187,16 +1493,16 @@ public final class PrimeMenuScreen extends Screen {
 				client.font
 			);
 			desc4.setColor(COLOR_SUBTITLE);
-			contentLayout.addChild(desc4, row++, 0, settings -> settings.alignHorizontallyCenter());
+			contentLayout.addChild(desc4, row++, 0, 1, 2, settings -> settings.alignHorizontallyCenter());
 
 			Button supportButton = Button.builder(
 				Component.literal(Messages.applyColorCodes(Messages.get(Messages.Id.BUTTON_SPECIAL_SUPPORT))),
 				button -> Util.getPlatform().openUri(SUPPORT_URL)
 			).size(BUTTON_WIDTH, BUTTON_HEIGHT).build();
 			supportButton.setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_SPECIAL_SUPPORT)));
-			contentLayout.addChild(supportButton, row++, 0, settings -> settings.alignHorizontallyCenter());
+			contentLayout.addChild(supportButton, row++, 0, 1, 2, settings -> settings.alignHorizontallyCenter());
 
-			contentLayout.addChild(new SpacerWidget(LIST_WIDTH, 4), row++, 0);
+			contentLayout.addChild(new SpacerWidget(LIST_WIDTH, 4), row++, 0, 1, 2);
 
 			StringWidget adminHeader = new StringWidget(
 				LIST_WIDTH,
@@ -1205,15 +1511,15 @@ public final class PrimeMenuScreen extends Screen {
 				client.font
 			);
 			adminHeader.setColor(COLOR_SECTION);
-			contentLayout.addChild(adminHeader, row++, 0, settings -> settings.alignHorizontallyCenter());
+			contentLayout.addChild(adminHeader, row++, 0, 1, 2, settings -> settings.alignHorizontallyCenter());
 
 			PlayerMarkRegistry.Member[] admins = PlayerMarkRegistry.adminMembers();
 			for (int i = 0; i < admins.length; i++) {
 				PlayerMarkRegistry.Member member = admins[i];
-				contentLayout.addChild(new RainbowNameWidget(member.name(), true), row++, 0);
+				contentLayout.addChild(new RainbowNameWidget(member.name(), true, NAME_COLUMN_WIDTH, false), row++, 0);
 			}
 
-			contentLayout.addChild(new SpacerWidget(LIST_WIDTH, 4), row++, 0);
+			contentLayout.addChild(new SpacerWidget(LIST_WIDTH, 4), row++, 0, 1, 2);
 
 			StringWidget specialHeader = new StringWidget(
 				LIST_WIDTH,
@@ -1222,12 +1528,25 @@ public final class PrimeMenuScreen extends Screen {
 				client.font
 			);
 			specialHeader.setColor(COLOR_SECTION);
-			contentLayout.addChild(specialHeader, row++, 0, settings -> settings.alignHorizontallyCenter());
+			contentLayout.addChild(specialHeader, row++, 0, 1, 2, settings -> settings.alignHorizontallyCenter());
 
 			PlayerMarkRegistry.Member[] specials = PlayerMarkRegistry.specialMembers();
-			for (int i = 0; i < specials.length; i++) {
-				PlayerMarkRegistry.Member member = specials[i];
-				contentLayout.addChild(new RainbowNameWidget(member.name(), false), row++, 0);
+			sortMembers(specials);
+			if (specials.length > 0) {
+				int col = 0;
+				for (int i = 0; i < specials.length; i++) {
+					PlayerMarkRegistry.Member member = specials[i];
+					boolean alignRight = col == 1;
+					contentLayout.addChild(new RainbowNameWidget(member.name(), false, NAME_COLUMN_WIDTH, alignRight), row, col);
+					col++;
+					if (col >= 2) {
+						col = 0;
+						row++;
+					}
+				}
+				if (col > 0) {
+					row++;
+				}
 			}
 
 			scrollLayout = new ScrollableLayout(client, contentLayout, 0);
@@ -1266,14 +1585,36 @@ public final class PrimeMenuScreen extends Screen {
 			title = rainbowBoldComponent(Messages.get(Messages.Id.TAB_SPECIAL), timeSeconds, font, TAB_TITLE_STYLE);
 		}
 
+		private static void sortMembers(PlayerMarkRegistry.Member[] members) {
+			java.util.Arrays.sort(members, (a, b) -> {
+				String nameA = a.name();
+				String nameB = b.name();
+				boolean digitA = nameA != null && !nameA.isEmpty() && Character.isDigit(nameA.charAt(0));
+				boolean digitB = nameB != null && !nameB.isEmpty() && Character.isDigit(nameB.charAt(0));
+				if (digitA != digitB) {
+					return digitA ? -1 : 1;
+				}
+				if (nameA == null) {
+					return nameB == null ? 0 : -1;
+				}
+				if (nameB == null) {
+					return 1;
+				}
+				int cmp = nameA.compareToIgnoreCase(nameB);
+				return cmp != 0 ? cmp : nameA.compareTo(nameB);
+			});
+		}
+
 		private static final class RainbowNameWidget extends AbstractWidget {
 			private final String name;
 			private final boolean admin;
+			private final boolean alignRight;
 
-			private RainbowNameWidget(String name, boolean admin) {
-				super(0, 0, LIST_WIDTH, LABEL_HEIGHT, Component.empty());
+			private RainbowNameWidget(String name, boolean admin, int width, boolean alignRight) {
+				super(0, 0, width, LABEL_HEIGHT, Component.empty());
 				this.name = name == null ? "" : name;
 				this.admin = admin;
+				this.alignRight = alignRight;
 			}
 
 			@Override
@@ -1282,6 +1623,10 @@ public final class PrimeMenuScreen extends Screen {
 				int x = getX();
 				int y = getY();
 				int cursorX = x;
+				if (alignRight) {
+					int nameWidth = font.width(name);
+					cursorX = x + Math.max(0, getWidth() - nameWidth - RIGHT_COLUMN_INSET);
+				}
 				if (admin) {
 					graphics.drawString(font, "", cursorX, y, COLOR_ADMIN_PREFIX, false);
 					cursorX += font.width("");
@@ -1466,6 +1811,8 @@ public final class PrimeMenuScreen extends Screen {
 		}
 	}
 }
+
+
 
 
 

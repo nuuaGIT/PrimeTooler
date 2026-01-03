@@ -48,10 +48,13 @@ public final class PlayerMarkRegistry {
 
 	public static Component decorateMarkedName(UUID uuid, Component baseName, String rawName,
 		float timeSeconds, Font font) {
-		if (!SpecialNamesState.isEnabled()) {
+		if (uuid == null || baseName == null || rawName == null || rawName.isEmpty()) {
 			return baseName;
 		}
-		if (uuid == null || baseName == null || rawName == null || rawName.isEmpty()) {
+		if (shouldStripClanTag()) {
+			baseName = stripClanTagSuffix(baseName);
+		}
+		if (!SpecialNamesState.isEnabled()) {
 			return baseName;
 		}
 		boolean admin = isAdmin(uuid);
@@ -67,6 +70,60 @@ public final class PlayerMarkRegistry {
 			return Component.empty().append(STAR_PREFIX).append(baseName);
 		}
 		return baseName;
+	}
+
+	private static boolean shouldStripClanTag() {
+		if (!ClanTagState.isEnabled()) {
+			return false;
+		}
+		Minecraft client = Minecraft.getInstance();
+		if (client == null) {
+			return false;
+		}
+		return !client.hasSingleplayerServer();
+	}
+
+	private static Component stripClanTagSuffix(Component baseName) {
+		String full = baseName.getString();
+		if (full == null || full.isEmpty()) {
+			return baseName;
+		}
+		int end = full.length() - 1;
+		if (end < 1 || full.charAt(end) != ']') {
+			return baseName;
+		}
+		int open = full.lastIndexOf('[', end);
+		if (open < 0) {
+			return baseName;
+		}
+		int cut = open;
+		if (open > 0 && full.charAt(open - 1) == ' ') {
+			cut = open - 1;
+		}
+		if (cut <= 0) {
+			return baseName;
+		}
+		return truncateComponent(baseName, cut);
+	}
+
+	private static Component truncateComponent(Component baseName, int maxChars) {
+		MutableComponent out = Component.empty();
+		int[] remaining = new int[] { maxChars };
+		baseName.visit((style, text) -> {
+			if (remaining[0] <= 0) {
+				return java.util.Optional.empty();
+			}
+			int take = text.length();
+			if (take > remaining[0]) {
+				take = remaining[0];
+			}
+			if (take > 0) {
+				out.append(Component.literal(text.substring(0, take)).setStyle(style));
+				remaining[0] -= take;
+			}
+			return java.util.Optional.empty();
+		}, Style.EMPTY);
+		return out;
 	}
 
 	private static Component replaceNameToken(Component baseName, String rawName, Component replacement) {
