@@ -22,8 +22,9 @@ public final class PlayerMarkRegistry {
 	private static final Member[] SPECIAL_PLAYERS = new Member[] {
 		new Member("Nuua", UUID.fromString("0b437436-3ef4-4c65-9f32-8811f0c09004")),
 		new Member("OSCAVI", UUID.fromString("13233136-498e-4881-960c-4b0e332f463e")),
-		new Member("EpicBuilderHD", UUID.fromString("3cfd67ea-df0e-465d-acc0-137373329a3a")),
-		new Member("1Reflexx", UUID.fromString("1d6e086a-41f7-4ced-b8dc-12b763e9843f"))
+		new Member("1Reflexx", UUID.fromString("1d6e086a-41f7-4ced-b8dc-12b763e9843f")),
+		new Member("Schwammig", UUID.fromString("4917ca1b-3098-428a-a962-9d4c01ca822f")),
+		new Member("EpicBuilderHD", UUID.fromString("3cfd67ea-df0e-465d-acc0-137373329a3a"))
 	};
 	private static final Component STAR_PREFIX =
 		Component.literal("★").withStyle(ChatFormatting.RED);

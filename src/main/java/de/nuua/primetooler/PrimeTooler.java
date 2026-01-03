@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory;
 
 public class PrimeTooler implements ModInitializer {
 	public static final String MOD_ID = "primetooler";
-	public static final String VERSION = "26.0.1";
+	public static final String VERSION = "26.1.2";
 
 	// This logger is used to write text to the console and the log file.
 	// It is considered best practice to use your mod id as the logger's name.

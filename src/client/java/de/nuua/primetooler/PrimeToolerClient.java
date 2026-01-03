@@ -6,6 +6,8 @@ import de.nuua.primetooler.core.config.ClientSettingsConfig;
 import de.nuua.primetooler.features.camerazoom.client.CameraZoomState;
 import de.nuua.primetooler.features.durabilityguard.client.DurabilityGuardState;
 import de.nuua.primetooler.features.inventorycalc.client.InventoryCalculatorState;
+import de.nuua.primetooler.features.inventoryeffects.client.InventoryEffectsState;
+import de.nuua.primetooler.features.inventoryeffects.client.HudEffectsState;
 import de.nuua.primetooler.features.locatorbar.client.LocatorBarState;
 import de.nuua.primetooler.features.resourcepackguard.client.ResourcePackGuardState;
 import de.nuua.primetooler.features.autospawn.client.AutoSpawnClientModule;
@@ -33,6 +35,8 @@ public class PrimeToolerClient implements ClientModInitializer {
 		AutoSpawnState.setEnabled(settings.autoSpawnLowHealth);
 		SpecialNamesState.setEnabled(settings.specialNames);
 		FrontCameraToggleState.setDisabled(settings.disableFrontCamera);
+		InventoryEffectsState.setEnabled(settings.inventoryEffects);
+		HudEffectsState.setEnabled(settings.hudEffects);
 		if (settings.blockServerPacks) {
 			ResourcePackGuardState.applyClientState(true);
 		}

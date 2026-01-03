@@ -43,6 +43,8 @@ public final class Messages {
 		LABEL_AUTOSPAWN,
 		LABEL_SPECIALNAMES,
 		LABEL_FRONTCAM,
+		LABEL_EFFECTS,
+		LABEL_HUDEFFECTS,
 		TOOLTIP_ZOOM,
 		TOOLTIP_DURABILITY,
 		TOOLTIP_CALC,
@@ -53,12 +55,15 @@ public final class Messages {
 		TOOLTIP_AUTOSPAWN,
 		TOOLTIP_SPECIALNAMES,
 		TOOLTIP_FRONTCAM,
+		TOOLTIP_EFFECTS,
+		TOOLTIP_HUDEFFECTS,
 		TOOLTIP_MSG,
 		TOOLTIP_ADD,
 		TOOLTIP_ADDONLY,
 		TOOLTIP_DELETE,
 		TOOLTIP_SENDCHAT,
 		TOOLTIP_SENDOWN,
+		TOOLTIP_CHAT_INPUT,
 		CHECKITEM_NO_HAND,
 		CHECKITEM_DUMP_HEADER,
 		CHECKITEM_ID,
@@ -131,6 +136,8 @@ public final class Messages {
 			case LABEL_AUTOSPAWN -> "Auto /plot home (wenig Leben): ";
 			case LABEL_SPECIALNAMES -> "Spezielle Namen: ";
 			case LABEL_FRONTCAM -> "Frontkamera: ";
+			case LABEL_EFFECTS -> "Effekte im Inventar: ";
+			case LABEL_HUDEFFECTS -> "Effekte im HUD: ";
 			case TOOLTIP_ZOOM ->
 				"&7Schaltet &f&lUnbegrenzter Zoom&7.";
 			case TOOLTIP_DURABILITY ->
@@ -151,13 +158,19 @@ public final class Messages {
 					+ "&7Schreibt &f&lnur-Client&7 Logs in die Konsole zur Diagnose.";
 			case TOOLTIP_AUTOSPAWN ->
 				"&7Auto &f&l/plot home&7 bei wenig Leben. &8• &7"
-					+ "&7Sendet den Befehl unterhalb des &f&lSchwellenwerts 2.5 Herzen%&7.";
+					+ "&7Sendet den Befehl unterhalb des &f&lSchwellenwerts 2.5 Herzen&7.";
 			case TOOLTIP_SPECIALNAMES ->
 				"&7Schaltet &f&lSpezielle Namen&7 Styling um. &8• &7"
 					+ "&7Gilt für &f&lTab & Nametags&7.";
 			case TOOLTIP_FRONTCAM ->
 				"&7Deaktiviert die &f&lFrontkamera&7 im F5. &8• &7"
 					+ "&7Wechselt nur zwischen &f&lEgo-Perspektive&7 und &f&lRückansicht&7.";
+			case TOOLTIP_EFFECTS ->
+				"&7Blendet die Effektanzeige im Inventar ein oder aus. &8\u2022 &7"
+					+ "&7Versteckt die &f&lTr\u00e4nkeffekte&7 auf der linken Seite.";
+			case TOOLTIP_HUDEFFECTS ->
+				"&7Blendet die Effektanzeige oben rechts im HUD ein oder aus. &8\u2022 &7"
+					+ "&7Versteckt aktive &f&lTrankeffekte&7 im Overlay.";
 			case TOOLTIP_MSG ->
 				"&7Klicke zum Bearbeiten; Text wird direkt gespeichert.";
 			case TOOLTIP_ADD ->
@@ -173,6 +186,9 @@ public final class Messages {
 			case TOOLTIP_SENDOWN ->
 				"&7Zeigt die Nachricht nur dir. &8• &7"
 					+ "&7Ideal zum Testen von &f&lFormatierung&7.";
+			case TOOLTIP_CHAT_INPUT ->
+				"&f&lCOLORCODES/n&0&&00 &1&&11 &2&&22 &3&&33 &4&&44 &5&&55 &6&&66 &7&&77 &8&&88 &9&&99 "
+					+ "&a&&aa &b&&bb &c&&cc &d&&dd &e&&ee &f&&ff &o&&oo&rKursiv &l&&ll&rDick &n&&nn&rUnterstrichen\n&m&&mm&rDurchstrichen &f&&fk&rMagisch&r &f&&frReset";
 			case CHECKITEM_NO_HAND -> "&cKein Item in der Haupthand.";
 			case CHECKITEM_DUMP_HEADER -> "&aItem-Dump:";
 			case CHECKITEM_ID -> "ID: " + arg(args, 0);
@@ -255,3 +271,10 @@ public final class Messages {
 		return value == null ? "" : value;
 	}
 }
+
+
+
+
+
+
+

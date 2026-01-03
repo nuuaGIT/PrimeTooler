@@ -14,6 +14,8 @@ public final class ClientSettingsConfig {
 	public boolean autoSpawnLowHealth;
 	public boolean specialNames = true;
 	public boolean disableFrontCamera;
+	public boolean inventoryEffects = true;
+	public boolean hudEffects = true;
 
 	public ClientSettingsConfig() {
 	}
@@ -27,7 +29,9 @@ public final class ClientSettingsConfig {
 		boolean slotLocking,
 		boolean autoSpawnLowHealth,
 		boolean specialNames,
-		boolean disableFrontCamera
+		boolean disableFrontCamera,
+		boolean inventoryEffects,
+		boolean hudEffects
 	) {
 		this.unlimitedZoom = unlimitedZoom;
 		this.durabilityGuard = durabilityGuard;
@@ -38,5 +42,7 @@ public final class ClientSettingsConfig {
 		this.autoSpawnLowHealth = autoSpawnLowHealth;
 		this.specialNames = specialNames;
 		this.disableFrontCamera = disableFrontCamera;
+		this.inventoryEffects = inventoryEffects;
+		this.hudEffects = hudEffects;
 	}
 }

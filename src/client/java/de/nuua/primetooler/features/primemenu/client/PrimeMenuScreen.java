@@ -13,6 +13,8 @@ import de.nuua.primetooler.features.camerazoom.client.FrontCameraToggleState;
 import de.nuua.primetooler.features.camerazoom.client.CameraZoomState;
 import de.nuua.primetooler.features.durabilityguard.client.DurabilityGuardState;
 import de.nuua.primetooler.features.inventorycalc.client.InventoryCalculatorState;
+import de.nuua.primetooler.features.inventoryeffects.client.InventoryEffectsState;
+import de.nuua.primetooler.features.inventoryeffects.client.HudEffectsState;
 import de.nuua.primetooler.features.locatorbar.client.LocatorBarState;
 import de.nuua.primetooler.features.resourcepackguard.client.ResourcePackGuardState;
 import de.nuua.primetooler.platform.config.ClientConfigIO;
@@ -376,6 +378,24 @@ public final class PrimeMenuScreen extends Screen {
 			}).size(CONFIG_BUTTON_WIDTH, BUTTON_HEIGHT).build();
 			frontCameraRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_FRONTCAM)));
 			layout.addChild(frontCameraRef[0], row + 4, 1);
+
+			Button[] inventoryEffectsRef = new Button[1];
+			inventoryEffectsRef[0] = Button.builder(inventoryEffectsLabel(InventoryEffectsState.isEnabled()), button -> {
+				boolean enabled = InventoryEffectsState.toggleEnabled();
+				inventoryEffectsRef[0].setMessage(inventoryEffectsLabel(enabled));
+				saveClientSettings();
+			}).size(CONFIG_BUTTON_WIDTH, BUTTON_HEIGHT).build();
+			inventoryEffectsRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_EFFECTS)));
+			layout.addChild(inventoryEffectsRef[0], row + 5, 0);
+
+			Button[] hudEffectsRef = new Button[1];
+			hudEffectsRef[0] = Button.builder(hudEffectsLabel(HudEffectsState.isEnabled()), button -> {
+				boolean enabled = HudEffectsState.toggleEnabled();
+				hudEffectsRef[0].setMessage(hudEffectsLabel(enabled));
+				saveClientSettings();
+			}).size(CONFIG_BUTTON_WIDTH, BUTTON_HEIGHT).build();
+			hudEffectsRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_HUDEFFECTS)));
+			layout.addChild(hudEffectsRef[0], row + 5, 1);
 		}
 
 		@Override
@@ -426,6 +446,14 @@ public final class PrimeMenuScreen extends Screen {
 		return labelWithState(Messages.get(Messages.Id.LABEL_FRONTCAM), !disabled);
 	}
 
+	private static Component inventoryEffectsLabel(boolean enabled) {
+		return labelWithState(Messages.get(Messages.Id.LABEL_EFFECTS), enabled);
+	}
+
+	private static Component hudEffectsLabel(boolean enabled) {
+		return labelWithState(Messages.get(Messages.Id.LABEL_HUDEFFECTS), enabled);
+	}
+
 	private static Component labelWithState(String label, boolean enabled) {
 		MutableComponent base = Component.literal(Messages.applyColorCodes(label));
 		Component state = enabled
@@ -444,7 +472,9 @@ public final class PrimeMenuScreen extends Screen {
 				CheckItemClientModule.isSlotLockingEnabled(),
 				AutoSpawnState.isEnabled(),
 				SpecialNamesState.isEnabled(),
-				FrontCameraToggleState.isDisabled()
+				FrontCameraToggleState.isDisabled(),
+				InventoryEffectsState.isEnabled(),
+				HudEffectsState.isEnabled()
 			));
 		}
 	}
@@ -521,6 +551,7 @@ public final class PrimeMenuScreen extends Screen {
 			addInput.setHint(
 				Component.literal(Messages.get(Messages.Id.CHAT_HINT_INPUT)).withStyle(ChatFormatting.GRAY)
 			);
+			addInput.setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_CHAT_INPUT)));
 
 			addButton = Button.builder(Component.literal(Messages.get(Messages.Id.BUTTON_ADD)), button -> {
 				String value = addInput.getValue().trim();
@@ -1253,7 +1284,8 @@ public final class PrimeMenuScreen extends Screen {
 		if (text == null || text.isEmpty()) {
 			return Tooltip.create(Component.empty());
 		}
-		return Tooltip.create(Component.literal(Messages.applyColorCodes(text)));
+		String normalized = text.replace("/n", "\n");
+		return Tooltip.create(Component.literal(Messages.applyColorCodes(normalized)));
 	}
 
 	private static boolean isFormatCode(char code) {
