@@ -1,0 +1,41 @@
+{
+	"schemaVersion": 1,
+	"id": "primetooler",
+	"version": "${version}",
+	"name": "PrimeTooler",
+	"description": "meow",
+	"authors": [
+		"Nuua"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/primetooler/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"de.nuua.primetooler.PrimeTooler"
+		],
+		"client": [
+			"de.nuua.primetooler.PrimeToolerClient"
+		],
+		"fabric-datagen": [
+			"de.nuua.primetooler.PrimeToolerDataGenerator"
+		]
+	},
+	"mixins": [
+		"primetooler.mixins.json",
+		{
+			"config": "primetooler.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.18.0",
+		"minecraft": "~1.21.10",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}

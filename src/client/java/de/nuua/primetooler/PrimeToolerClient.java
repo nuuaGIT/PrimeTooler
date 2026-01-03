@@ -1,0 +1,43 @@
+package de.nuua.primetooler;
+
+import de.nuua.primetooler.core.lifecycle.Boot;
+import de.nuua.primetooler.core.lifecycle.EnvironmentInfo;
+import de.nuua.primetooler.core.config.ClientSettingsConfig;
+import de.nuua.primetooler.features.camerazoom.client.CameraZoomState;
+import de.nuua.primetooler.features.durabilityguard.client.DurabilityGuardState;
+import de.nuua.primetooler.features.inventorycalc.client.InventoryCalculatorState;
+import de.nuua.primetooler.features.locatorbar.client.LocatorBarState;
+import de.nuua.primetooler.features.resourcepackguard.client.ResourcePackGuardState;
+import de.nuua.primetooler.features.autospawn.client.AutoSpawnClientModule;
+import de.nuua.primetooler.features.autospawn.client.AutoSpawnState;
+import de.nuua.primetooler.features.checkitem.client.CheckItemClientModule;
+import de.nuua.primetooler.features.primemenu.client.PrimeMenuClientModule;
+import de.nuua.primetooler.platform.config.ClientConfigIO;
+import de.nuua.primetooler.platform.PlatformEnvironment;
+import de.nuua.primetooler.platform.event.FabricClientTickBridge;
+import net.fabricmc.api.ClientModInitializer;
+
+public class PrimeToolerClient implements ClientModInitializer {
+	@Override
+	public void onInitializeClient() {
+		EnvironmentInfo env = PlatformEnvironment.current();
+		ClientSettingsConfig settings = ClientConfigIO.loadClientSettings();
+		CameraZoomState.setEnabled(settings.unlimitedZoom);
+		DurabilityGuardState.setEnabled(settings.durabilityGuard);
+		InventoryCalculatorState.setEnabled(settings.inventoryCalc);
+		LocatorBarState.setEnabled(settings.locatorBar);
+		ResourcePackGuardState.setEnabled(settings.blockServerPacks);
+		CheckItemClientModule.setSlotLockingEnabled(settings.slotLocking);
+		AutoSpawnState.setEnabled(settings.autoSpawnLowHealth);
+		if (settings.blockServerPacks) {
+			ResourcePackGuardState.applyClientState(true);
+		}
+		Boot.bootClient(
+			env,
+			new FabricClientTickBridge(),
+			new PrimeMenuClientModule(),
+			new CheckItemClientModule(),
+			new AutoSpawnClientModule()
+		);
+	}
+}

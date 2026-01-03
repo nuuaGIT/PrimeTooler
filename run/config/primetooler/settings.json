@@ -1,0 +1,9 @@
+{
+  "unlimitedZoom": false,
+  "durabilityGuard": true,
+  "inventoryCalc": true,
+  "blockServerPacks": false,
+  "locatorBar": true,
+  "slotLocking": true,
+  "autoSpawnLowHealth": true
+}

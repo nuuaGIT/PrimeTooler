@@ -1,0 +1,30 @@
+{
+	"required": true,
+	"package": "de.nuua.primetooler.mixin.client",
+	"compatibilityLevel": "JAVA_21",
+	"client": [
+		"ExampleClientMixin",
+		"AbstractContainerScreenMixin",
+		"AbstractContainerMenuMixin",
+		"AbstractWidgetAccessor",
+		"AvatarRendererMixin",
+		"CameraMixin",
+		"ChatListenerMixin",
+		"DownloadedPackSourceMixin",
+		"GuiGraphicsMixin",
+		"GuiMixin",
+		"InventoryScreenMixin",
+		"ItemStackTooltipMixin",
+		"LocalPlayerMixin",
+		"LocatorBarRendererMixin",
+		"LogoRendererMixin",
+		"MultiPlayerGameModeMixin",
+		"MouseHandlerMixin",
+		"PlayerTabOverlayMixin",
+		"ScreenAccessor",
+		"TitleScreenMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

@@ -1,0 +1,16 @@
+/.vscode
+/agents.md
+/build/
+/out/
+/bin/
+/.gradle/
+/saves/
+/configs/
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+thread_dump.txt
