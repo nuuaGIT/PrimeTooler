@@ -17,6 +17,8 @@ import de.nuua.primetooler.features.inventoryeffects.client.InventoryEffectsStat
 import de.nuua.primetooler.features.inventoryeffects.client.HudEffectsState;
 import de.nuua.primetooler.features.locatorbar.client.LocatorBarState;
 import de.nuua.primetooler.features.resourcepackguard.client.ResourcePackGuardState;
+import de.nuua.primetooler.mixin.client.ScrollableLayoutAccessor;
+import de.nuua.primetooler.mixin.client.ScrollableLayoutContainerAccessor;
 import de.nuua.primetooler.platform.config.ClientConfigIO;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -763,6 +765,7 @@ public final class PrimeMenuScreen extends Screen {
 			if (index < 0 || index >= messages.length) {
 				return;
 			}
+			scrollToTop();
 			String value = messages[index];
 			if (value == null) {
 				value = "";
@@ -772,6 +775,13 @@ public final class PrimeMenuScreen extends Screen {
 			addInput.moveCursorToStart(false);
 			adding = false;
 			setEditing(true);
+		}
+
+		private void scrollToTop() {
+			Object container = ((ScrollableLayoutAccessor) (Object) scrollLayout).primetooler$getContainer();
+			if (container instanceof ScrollableLayoutContainerAccessor accessor) {
+				accessor.primetooler$setScrollAmount(0.0);
+			}
 		}
 
 		private void sendEditToChat() {
@@ -1180,7 +1190,7 @@ public final class PrimeMenuScreen extends Screen {
 			contentLayout.addChild(desc4, row++, 0, settings -> settings.alignHorizontallyCenter());
 
 			Button supportButton = Button.builder(
-				Component.literal(Messages.get(Messages.Id.BUTTON_SPECIAL_SUPPORT)),
+				Component.literal(Messages.applyColorCodes(Messages.get(Messages.Id.BUTTON_SPECIAL_SUPPORT))),
 				button -> Util.getPlatform().openUri(SUPPORT_URL)
 			).size(BUTTON_WIDTH, BUTTON_HEIGHT).build();
 			supportButton.setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_SPECIAL_SUPPORT)));
