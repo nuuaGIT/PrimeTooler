@@ -588,6 +588,13 @@ public final class PrimeMenuScreen extends Screen {
 				return;
 			}
 			searchBox.setFocused(false);
+			if (scrollLayout != null) {
+				scrollLayout.visitChildren(element -> {
+					if (element instanceof AbstractWidget widget) {
+						removeWidget.accept(widget);
+					}
+				});
+			}
 			header.visible = false;
 			desc1.visible = false;
 			desc2.visible = false;
@@ -1003,6 +1010,16 @@ public final class PrimeMenuScreen extends Screen {
 		@Override
 		public void visitChildren(java.util.function.Consumer<AbstractWidget> consumer) {
 			contentLayout.visitChildren(element -> {
+				if (element instanceof AbstractWidget widget) {
+					consumer.accept(widget);
+				}
+			});
+			controlsLayout.visitChildren(element -> {
+				if (element instanceof AbstractWidget widget) {
+					consumer.accept(widget);
+				}
+			});
+			messagesLayout.visitChildren(element -> {
 				if (element instanceof AbstractWidget widget) {
 					consumer.accept(widget);
 				}
