@@ -24,6 +24,67 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
 @Mixin(ChatListener.class)
 public class ChatListenerMixin {
 	@ModifyVariable(
+		method = "handleSystemMessage(Lnet/minecraft/network/chat/Component;Z)V",
+		at = @At("HEAD"),
+		argsOnly = true,
+		index = 1
+	)
+	private Component primetooler$highlightMentionsSystem(Component value, Component msg, boolean overlay) {
+		if (value == null || overlay || !ChatMentionState.isEnabled()) {
+			return value;
+		}
+		Minecraft client = Minecraft.getInstance();
+		if (client == null || client.player == null) {
+			return value;
+		}
+		String name = client.player.getName().getString();
+		if (name == null || name.isEmpty()) {
+			return value;
+		}
+		ChatMentionHighlighter.Result result = ChatMentionHighlighter.highlight(value, name);
+		if (!result.matched()) {
+			return value;
+		}
+		Component title = Component.literal(Messages.applyColorCodes(Messages.get(Messages.Id.CHAT_MENTION_TOAST_TITLE)));
+		String alertText = Messages.get(Messages.Id.CHAT_MENTION_ALERT).replace("<NAME>", "System");
+		Component alert = Component.literal(Messages.applyColorCodes(alertText));
+		ChatMentionToast.addOrUpdate(client.getToastManager(), title, alert);
+		SoundPlayer.playWarning(SoundEvents.NOTE_BLOCK_PLING.value(), 0.5f, 1.1f);
+		return result.component();
+	}
+
+	@ModifyVariable(
+		method = "handleDisguisedChatMessage(Lnet/minecraft/network/chat/Component;Lnet/minecraft/network/chat/ChatType$Bound;)V",
+		at = @At("HEAD"),
+		argsOnly = true,
+		index = 1
+	)
+	private Component primetooler$highlightMentionsDisguised(Component value, Component msg, ChatType.Bound bound) {
+		if (value == null || !ChatMentionState.isEnabled()) {
+			return value;
+		}
+		Minecraft client = Minecraft.getInstance();
+		if (client == null || client.player == null) {
+			return value;
+		}
+		String name = client.player.getName().getString();
+		if (name == null || name.isEmpty()) {
+			return value;
+		}
+		ChatMentionHighlighter.Result result = ChatMentionHighlighter.highlight(value, name);
+		if (!result.matched()) {
+			return value;
+		}
+		Component title = Component.literal(Messages.applyColorCodes(Messages.get(Messages.Id.CHAT_MENTION_TOAST_TITLE)));
+		String sender = bound != null && bound.name() != null ? bound.name().getString() : "Chat";
+		String alertText = Messages.get(Messages.Id.CHAT_MENTION_ALERT).replace("<NAME>", sender);
+		Component alert = Component.literal(Messages.applyColorCodes(alertText));
+		ChatMentionToast.addOrUpdate(client.getToastManager(), title, alert);
+		SoundPlayer.playWarning(SoundEvents.NOTE_BLOCK_PLING.value(), 0.5f, 1.1f);
+		return result.component();
+	}
+
+	@ModifyVariable(
 		method = "handlePlayerChatMessage(Lnet/minecraft/network/chat/PlayerChatMessage;Lcom/mojang/authlib/GameProfile;Lnet/minecraft/network/chat/ChatType$Bound;)V",
 		at = @At("HEAD"),
 		argsOnly = true,
