@@ -25,6 +25,10 @@ public final class ClientSettingsConfig {
 	public boolean fishbagWeight;
 	public boolean fishbagCoins;
 	public boolean fishMoneyTracker;
+	public boolean overallCoinsTracker;
+	public boolean jobXpTracker;
+	public boolean jobMoneyTracker;
+	public boolean autoAngelSystem;
 	public boolean hideClanTag;
 	@SerializedName("muteBeaconSound")
 	public boolean muteBoosterSound;
@@ -55,6 +59,10 @@ public final class ClientSettingsConfig {
 		boolean fishbagWeight,
 		boolean fishbagCoins,
 		boolean fishMoneyTracker,
+		boolean overallCoinsTracker,
+		boolean jobXpTracker,
+		boolean jobMoneyTracker,
+		boolean autoAngelSystem,
 		boolean hideClanTag,
 		boolean muteBoosterSound,
 		boolean muteJackpotSound,
@@ -80,6 +88,10 @@ public final class ClientSettingsConfig {
 		this.fishbagWeight = fishbagWeight;
 		this.fishbagCoins = fishbagCoins;
 		this.fishMoneyTracker = fishMoneyTracker;
+		this.overallCoinsTracker = overallCoinsTracker;
+		this.jobXpTracker = jobXpTracker;
+		this.jobMoneyTracker = jobMoneyTracker;
+		this.autoAngelSystem = autoAngelSystem;
 		this.hideClanTag = hideClanTag;
 		this.muteBoosterSound = muteBoosterSound;
 		this.muteJackpotSound = muteJackpotSound;

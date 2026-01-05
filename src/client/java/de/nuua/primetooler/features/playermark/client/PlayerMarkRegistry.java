@@ -1,5 +1,6 @@
 package de.nuua.primetooler.features.playermark.client;
 
+import de.nuua.primetooler.PrimeTooler;
 import java.util.UUID;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -16,8 +17,23 @@ public final class PlayerMarkRegistry {
 	public record Member(String name, UUID uuid) {
 	}
 
+	public enum Rank {
+		ADMIN,
+		UWU,
+		SPECIAL,
+		NORMAL
+	}
+
 	private static final Member[] ADMIN_PLAYERS = new Member[] {
 		new Member("Nuua", UUID.fromString("0b437436-3ef4-4c65-9f32-8811f0c09004"))
+	};
+	private static final Member[] UWU_PLAYERS = new Member[] {
+		new Member("Nuua", UUID.fromString("0b437436-3ef4-4c65-9f32-8811f0c09004")),
+		new Member("OSCAVI", UUID.fromString("13233136-498e-4881-960c-4b0e332f463e")),
+		new Member("1Reflexx", UUID.fromString("1d6e086a-41f7-4ced-b8dc-12b763e9843f")),
+		new Member("Schwammig", UUID.fromString("4917ca1b-3098-428a-a962-9d4c01ca822f")),
+		new Member("EpicBuilderHD", UUID.fromString("3cfd67ea-df0e-465d-acc0-137373329a3a")),
+		new Member("Flow_737", UUID.fromString("303ffd76-6351-41a7-822b-9da40da1352b"))
 	};
 	private static final Member[] SPECIAL_PLAYERS = new Member[] {
 		new Member("Nuua", UUID.fromString("0b437436-3ef4-4c65-9f32-8811f0c09004")),
@@ -155,6 +171,10 @@ public final class PlayerMarkRegistry {
 		return ADMIN_PLAYERS.clone();
 	}
 
+	public static Member[] uwuMembers() {
+		return UWU_PLAYERS.clone();
+	}
+
 	public static Member[] specialMembers() {
 		int count = 0;
 		for (int i = 0; i < SPECIAL_PLAYERS.length; i++) {
@@ -180,18 +200,123 @@ public final class PlayerMarkRegistry {
 		return rainbowComponent(name, timeSeconds, font);
 	}
 
-	public static boolean isAuthorizedUser() {
+	public static Rank rankOf(UUID uuid) {
+		if (uuid == null) {
+			return Rank.NORMAL;
+		}
+		if (isAdmin(uuid)) {
+			return Rank.ADMIN;
+		}
+		if (isSpecial(uuid)) {
+			return Rank.SPECIAL;
+		}
+		if (isUwu(uuid)) {
+			return Rank.UWU;
+		}
+		return Rank.NORMAL;
+	}
+
+	public static Rank currentUserRank() {
+		if (PrimeTooler.FORCE_SPECIAL_ACCESS) {
+			return Rank.SPECIAL;
+		}
+		if (PrimeTooler.FORCE_UWU_ACCESS) {
+			return Rank.UWU;
+		}
 		Minecraft client = Minecraft.getInstance();
-		if (client == null || client.getUser() == null) {
+		if (client == null) {
+			return Rank.NORMAL;
+		}
+		UUID playerUuid = client.player != null ? client.player.getUUID() : null;
+		UUID profileUuid = client.getUser() != null ? client.getUser().getProfileId() : null;
+		String playerName = client.player != null ? client.player.getName().getString() : null;
+		String profileName = client.getUser() != null ? client.getUser().getName() : null;
+		Rank playerRank = rankOf(playerUuid);
+		if (playerRank != Rank.NORMAL) {
+			return playerRank;
+		}
+		Rank profileRank = rankOf(profileUuid);
+		if (profileRank != Rank.NORMAL) {
+			return profileRank;
+		}
+		if (isCurrentUserInList(ADMIN_PLAYERS, playerUuid, profileUuid, playerName, profileName)) {
+			return Rank.ADMIN;
+		}
+		if (isCurrentUserInList(SPECIAL_PLAYERS, playerUuid, profileUuid, playerName, profileName)) {
+			return Rank.SPECIAL;
+		}
+		if (isCurrentUserInList(UWU_PLAYERS, playerUuid, profileUuid, playerName, profileName)) {
+			return Rank.UWU;
+		}
+		return Rank.NORMAL;
+	}
+
+	public static boolean isUwuUser() {
+		if (PrimeTooler.FORCE_UWU_ACCESS) {
+			return true;
+		}
+		Minecraft client = Minecraft.getInstance();
+		if (client == null) {
 			return false;
 		}
-		UUID uuid = client.getUser().getProfileId();
-		return uuid != null && (isAdmin(uuid) || isSpecial(uuid));
+		UUID playerUuid = client.player != null ? client.player.getUUID() : null;
+		UUID profileUuid = client.getUser() != null ? client.getUser().getProfileId() : null;
+		String playerName = client.player != null ? client.player.getName().getString() : null;
+		String profileName = client.getUser() != null ? client.getUser().getName() : null;
+		if ((playerUuid != null && isUwu(playerUuid)) || (profileUuid != null && isUwu(profileUuid))) {
+			return true;
+		}
+		return isCurrentUserInList(UWU_PLAYERS, playerUuid, profileUuid, playerName, profileName);
+	}
+
+	private static boolean isCurrentUserInList(Member[] members, UUID playerUuid, UUID profileUuid,
+		String playerName, String profileName) {
+		for (int i = 0; i < members.length; i++) {
+			Member member = members[i];
+			UUID uuid = member.uuid;
+			if (uuid != null && (uuid.equals(playerUuid) || uuid.equals(profileUuid))) {
+				return true;
+			}
+			String name = member.name;
+			if (name != null && (equalsIgnoreCase(name, playerName) || equalsIgnoreCase(name, profileName))) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private static boolean equalsIgnoreCase(String a, String b) {
+		if (a == null || b == null) {
+			return false;
+		}
+		if (a.length() != b.length()) {
+			return false;
+		}
+		for (int i = 0; i < a.length(); i++) {
+			char ca = a.charAt(i);
+			char cb = b.charAt(i);
+			if (ca == cb) {
+				continue;
+			}
+			if (Character.toLowerCase(ca) != Character.toLowerCase(cb)) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	private static boolean isAdmin(UUID uuid) {
 		for (int i = 0; i < ADMIN_PLAYERS.length; i++) {
 			if (ADMIN_PLAYERS[i].uuid.equals(uuid)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private static boolean isUwu(UUID uuid) {
+		for (int i = 0; i < UWU_PLAYERS.length; i++) {
+			if (UWU_PLAYERS[i].uuid.equals(uuid)) {
 				return true;
 			}
 		}

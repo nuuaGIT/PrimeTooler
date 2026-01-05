@@ -54,7 +54,33 @@ public final class HudEditorScreen extends Screen {
 
 	@Override
 	protected void init() {
-		elements = HudElementRegistry.elements();
+		HudElement[] all = HudElementRegistry.elements();
+		Minecraft client = minecraft;
+		if (client == null || all.length == 0) {
+			elements = all;
+		} else {
+			HudElement[] active = new HudElement[all.length];
+			int count = 0;
+			for (int i = 0; i < all.length; i++) {
+				HudElement element = all[i];
+				if (element == null) {
+					continue;
+				}
+				int ew = element.width(client);
+				int eh = element.height(client);
+				if (ew <= 0 || eh <= 0) {
+					continue;
+				}
+				active[count++] = element;
+			}
+			if (count == all.length) {
+				elements = all;
+			} else if (count == 0) {
+				elements = new HudElement[0];
+			} else {
+				elements = java.util.Arrays.copyOf(active, count);
+			}
+		}
 
 		int x = Math.max(0, (width - DONE_BUTTON_WIDTH) / 2);
 		int y = Math.max(0, height - DONE_BOTTOM_PADDING - DONE_BUTTON_HEIGHT);

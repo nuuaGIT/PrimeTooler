@@ -3,7 +3,6 @@ package de.nuua.primetooler.features.primemenu.client;
 import de.nuua.primetooler.core.config.ChatInputsConfig;
 import de.nuua.primetooler.core.config.ClientSettingsConfig;
 import de.nuua.primetooler.core.Messages;
-import de.nuua.primetooler.PrimeTooler;
 import de.nuua.primetooler.features.autospawn.client.AutoSpawnState;
 import de.nuua.primetooler.api.v1.client.text.RainbowTextRenderer;
 import de.nuua.primetooler.api.v1.client.text.RainbowTextStyle;
@@ -26,6 +25,8 @@ import de.nuua.primetooler.features.locatorbar.client.LocatorBarState;
 import de.nuua.primetooler.features.resourcepackguard.client.ResourcePackGuardState;
 import de.nuua.primetooler.features.terminalstackcount.client.TerminalStackCountState;
 import de.nuua.primetooler.features.fishbag.client.FishbagTotalState;
+import de.nuua.primetooler.features.autoangelsystem.client.AutoAngelSystemState;
+import de.nuua.primetooler.features.jobtracker.client.JobTrackerState;
 import de.nuua.primetooler.platform.config.ClientConfigIO;
 import de.nuua.primetooler.platform.input.PrimeToolerKeyBindings;
 import de.nuua.primetooler.platform.sound.SoundPlayer;
@@ -129,10 +130,9 @@ public final class PrimeMenuScreen extends Screen {
 	@Override
 	protected void init() {
 		tabManager = new TabManager(this::addTabWidget, this::removeWidget);
-		boolean specialAccess = PrimeTooler.FORCE_SPECIAL_ACCESS || PlayerMarkRegistry.isAuthorizedUser();
-		int maxMessages = getChatMessagesMax(specialAccess);
+		int maxMessages = CHAT_MESSAGES_MAX_SPECIAL;
 		homeTab = new PrimeMenuHomeTab(this, this::addTabWidget, this::removeWidget);
-		chatToolsTab = new ChatToolsTab(ClientConfigIO.loadChatInputs(maxMessages), maxMessages, specialAccess);
+		chatToolsTab = new ChatToolsTab(ClientConfigIO.loadChatInputs(maxMessages), maxMessages);
 		specialMembersTab = new SpecialMembersTab();
 		tabNavigationBar = TabNavigationBar.builder(tabManager, width)
 			.addTabs(
@@ -280,10 +280,6 @@ public final class PrimeMenuScreen extends Screen {
 		tabManager.setTabArea(tabArea);
 	}
 
-	private static int getChatMessagesMax(boolean specialAccess) {
-		return specialAccess ? CHAT_MESSAGES_MAX_SPECIAL : CHAT_MESSAGES_MAX_DEFAULT;
-	}
-
 	private static final class PlaceholderTab extends GridLayoutTab {
 		private PlaceholderTab(Component title) {
 			super(title);
@@ -330,6 +326,7 @@ public final class PrimeMenuScreen extends Screen {
 		private final StringWidget soundHeader;
 		private final EditBox searchBox;
 		private final Button hudAdjustButton;
+		private final Button uwuButton;
 		private final Button slotLockButton;
 		private final Button doubleDropButton;
 		private final AutoSpawnThresholdWidget autoSpawnWidget;
@@ -344,7 +341,6 @@ public final class PrimeMenuScreen extends Screen {
 			this.owner = owner;
 			client = Minecraft.getInstance();
 
-			boolean specialAccess = PrimeTooler.FORCE_SPECIAL_ACCESS || PlayerMarkRegistry.isAuthorizedUser();
 			header = new StringWidget(
 				CONFIG_LAYOUT_WIDTH,
 				CONFIG_LABEL_HEIGHT,
@@ -410,6 +406,18 @@ public final class PrimeMenuScreen extends Screen {
 					));
 				}
 			).size(CONFIG_HUD_BUTTON_WIDTH, BUTTON_HEIGHT).build();
+
+			if (PlayerMarkRegistry.isUwuUser()) {
+				uwuButton = Button.builder(Component.literal("???"), button -> {
+					Minecraft mc = Minecraft.getInstance();
+					if (mc == null) {
+						return;
+					}
+					mc.setScreen(new de.nuua.primetooler.features.uwu.client.UwuSecretScreen(owner));
+				}).size(40, BUTTON_HEIGHT).build();
+			} else {
+				uwuButton = null;
+			}
 
 			gameplayHeader = new StringWidget(
 				CONFIG_LAYOUT_WIDTH,
@@ -496,23 +504,8 @@ public final class PrimeMenuScreen extends Screen {
 			gameplayEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_SYNC), syncDebugRef[0]));
 
 			Button[] autoSpawnRef = new Button[1];
-			autoSpawnWidget = new AutoSpawnThresholdWidget(
-				0,
-				0,
-				CONFIG_BUTTON_WIDTH,
-				BUTTON_HEIGHT,
-				specialAccess
-			);
-			autoSpawnWidget.setTooltip(tooltip(Messages.get(
-				Messages.Id.TOOLTIP_AUTOSPAWN,
-				AutoSpawnThresholdWidget.formatHearts(AutoSpawnState.heartsThreshold())
-			)));
-			if (!specialAccess) {
-				autoSpawnWidget.active = false;
-				autoSpawnWidget.setMessage(noAccessLabel());
-				autoSpawnWidget.setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_LOCKED)));
-			}
-			gameplayEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_AUTOSPAWN), autoSpawnWidget));
+			// UWU-only features are configured in the secret menu ("???") instead of the public config list.
+			autoSpawnWidget = null;
 
 			Button[] fishbagTotalRef = new Button[1];
 			fishbagTotalRef[0] = Button.builder(fishbagTotalLabel(FishbagTotalState.isTotalEnabled()), button -> {
@@ -549,6 +542,24 @@ public final class PrimeMenuScreen extends Screen {
 			}).size(CONFIG_BUTTON_WIDTH, BUTTON_HEIGHT).build();
 			fishMoneyTrackerRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_FISH_MONEY_TRACKER)));
 			gameplayEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_FISH_MONEY_TRACKER), fishMoneyTrackerRef[0]));
+
+			Button[] jobXpTrackerRef = new Button[1];
+			jobXpTrackerRef[0] = Button.builder(jobXpTrackerLabel(JobTrackerState.isXpEnabled()), button -> {
+				boolean enabled = JobTrackerState.toggleXpEnabled();
+				jobXpTrackerRef[0].setMessage(jobXpTrackerLabel(enabled));
+				saveClientSettings();
+			}).size(CONFIG_BUTTON_WIDTH, BUTTON_HEIGHT).build();
+			jobXpTrackerRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_JOB_XP_TRACKER)));
+			gameplayEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_JOB_XP_TRACKER), jobXpTrackerRef[0]));
+
+			Button[] jobMoneyTrackerRef = new Button[1];
+			jobMoneyTrackerRef[0] = Button.builder(jobMoneyTrackerLabel(JobTrackerState.isMoneyEnabled()), button -> {
+				boolean enabled = JobTrackerState.toggleMoneyEnabled();
+				jobMoneyTrackerRef[0].setMessage(jobMoneyTrackerLabel(enabled));
+				saveClientSettings();
+			}).size(CONFIG_BUTTON_WIDTH, BUTTON_HEIGHT).build();
+			jobMoneyTrackerRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_JOB_MONEY_TRACKER)));
+			gameplayEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_JOB_MONEY_TRACKER), jobMoneyTrackerRef[0]));
 
 			visualHeader = new StringWidget(
 				CONFIG_LAYOUT_WIDTH,
@@ -680,18 +691,13 @@ public final class PrimeMenuScreen extends Screen {
 
 			private final Button toggleButton;
 			private final EditBox input;
-			private final boolean specialAccess;
 			private boolean editing;
 
-			private AutoSpawnThresholdWidget(int x, int y, int width, int height, boolean specialAccess) {
+			private AutoSpawnThresholdWidget(int x, int y, int width, int height) {
 				super(x, y, width, height, autoSpawnLabel(AutoSpawnState.isEnabled()));
-				this.specialAccess = specialAccess;
 
 				Button[] toggleRef = new Button[1];
 				toggleRef[0] = Button.builder(autoSpawnLabel(AutoSpawnState.isEnabled()), button -> {
-					if (!this.specialAccess) {
-						return;
-					}
 					boolean enabled = AutoSpawnState.toggleEnabled();
 					toggleRef[0].setMessage(autoSpawnLabel(enabled));
 					setMessage(toggleRef[0].getMessage());
@@ -738,7 +744,7 @@ public final class PrimeMenuScreen extends Screen {
 					return input.mouseClicked(event, unknown);
 				}
 
-				if (!this.active || !this.specialAccess) {
+				if (!this.active) {
 					return false;
 				}
 				if (mx < getX() || mx > getX() + getWidth() || my < getY() || my > getY() + getHeight()) {
@@ -964,6 +970,10 @@ public final class PrimeMenuScreen extends Screen {
 				desc3.visible = true;
 				searchBox.visible = true;
 				hudAdjustButton.visible = true;
+				if (uwuButton != null) {
+					uwuButton.visible = true;
+					addWidget.accept(uwuButton);
+				}
 				refreshKeyTooltips();
 				applySearch(searchBox.getValue());
 				return;
@@ -976,12 +986,18 @@ public final class PrimeMenuScreen extends Screen {
 					}
 				});
 			}
+			if (uwuButton != null) {
+				removeWidget.accept(uwuButton);
+			}
 			header.visible = false;
 			desc1.visible = false;
 			desc2.visible = false;
 			desc3.visible = false;
 			searchBox.visible = false;
 			hudAdjustButton.visible = false;
+			if (uwuButton != null) {
+				uwuButton.visible = false;
+			}
 			gameplayHeader.visible = false;
 			visualHeader.visible = false;
 			soundHeader.visible = false;
@@ -1090,6 +1106,10 @@ public final class PrimeMenuScreen extends Screen {
 			scrollLayout.setMinWidth(CONFIG_LAYOUT_WIDTH);
 			scrollLayout.setMaxHeight(area.height());
 			scrollLayout.arrangeElements();
+			if (uwuButton != null) {
+				uwuButton.setX(area.left() + 4);
+				uwuButton.setY(area.top() + 4);
+			}
 		}
 	}
 
@@ -1149,6 +1169,14 @@ public final class PrimeMenuScreen extends Screen {
 
 	private static Component fishMoneyTrackerLabel(boolean enabled) {
 		return labelWithState(Messages.get(Messages.Id.LABEL_FISH_MONEY_TRACKER), enabled);
+	}
+
+	private static Component jobXpTrackerLabel(boolean enabled) {
+		return labelWithState(Messages.get(Messages.Id.LABEL_JOB_XP_TRACKER), enabled);
+	}
+
+	private static Component jobMoneyTrackerLabel(boolean enabled) {
+		return labelWithState(Messages.get(Messages.Id.LABEL_JOB_MONEY_TRACKER), enabled);
 	}
 
 	private static Component specialNamesLabel(boolean enabled) {
@@ -1239,6 +1267,10 @@ public final class PrimeMenuScreen extends Screen {
 			FishbagTotalState.isWeightEnabled(),
 			FishbagTotalState.isCoinsEnabled(),
 			FishbagTotalState.isMoneyTrackerEnabled(),
+			false,
+			JobTrackerState.isXpEnabled(),
+			JobTrackerState.isMoneyEnabled(),
+			AutoAngelSystemState.isEnabled(),
 			ClanTagState.isEnabled(),
 			BeaconSoundState.isEnabled(),
 			JackpotSoundState.isEnabled(),
@@ -1257,7 +1289,6 @@ public final class PrimeMenuScreen extends Screen {
 		private final GridLayout messagesLayout = new GridLayout();
 		private ScreenRectangle lastArea;
 		private final int maxMessages;
-		private final boolean specialAccess;
 		private final Button[] messageButtons;
 		private final StringWidget[] timerLabels;
 		private final long[] cooldownEnds;
@@ -1271,9 +1302,8 @@ public final class PrimeMenuScreen extends Screen {
 		private boolean adding;
 		private int editingIndex = -1;
 
-		private ChatToolsTab(ChatInputsConfig config, int maxMessages, boolean specialAccess) {
+		private ChatToolsTab(ChatInputsConfig config, int maxMessages) {
 			this.maxMessages = Math.max(1, maxMessages);
-			this.specialAccess = specialAccess;
 			client = Minecraft.getInstance();
 			contentLayout.rowSpacing(CHAT_ROW_SPACING);
 			contentLayout.columnSpacing(CHAT_COLUMN_SPACING);
@@ -1697,13 +1727,8 @@ public final class PrimeMenuScreen extends Screen {
 			boolean hasSlot = findEmptySlot() >= 0;
 			addButton.active = hasSlot;
 			addOnlyButton.active = hasSlot;
-			if (!hasSlot && !specialAccess) {
-				addButton.setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_ADD_LOCKED)));
-				addOnlyButton.setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_ADD_LOCKED)));
-			} else {
-				addButton.setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_ADD)));
-				addOnlyButton.setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_ADDONLY)));
-			}
+			addButton.setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_ADD)));
+			addOnlyButton.setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_ADDONLY)));
 		}
 
 		private String[] normalizeMessages(String[] input) {

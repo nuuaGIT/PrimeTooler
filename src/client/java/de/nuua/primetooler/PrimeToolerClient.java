@@ -24,7 +24,14 @@ import de.nuua.primetooler.features.fishbag.client.FishbagWeightHudElement;
 import de.nuua.primetooler.features.fishbag.client.FishbagCoinsHudElement;
 import de.nuua.primetooler.features.fishbag.client.FishMoneyTrackerHudElement;
 import de.nuua.primetooler.features.fishbag.client.FishbagTotalScanJob;
+import de.nuua.primetooler.features.jobtracker.client.JobMoneyTrackerHudElement;
+import de.nuua.primetooler.features.jobtracker.client.JobTrackerClientModule;
+import de.nuua.primetooler.features.jobtracker.client.JobTrackerState;
+import de.nuua.primetooler.features.jobtracker.client.JobXpTrackerHudElement;
+import de.nuua.primetooler.features.autoangelsystem.client.AutoAngelSystemClientModule;
+import de.nuua.primetooler.features.autoangelsystem.client.AutoAngelSystemState;
 import de.nuua.primetooler.features.checkitem.client.CheckItemClientModule;
+import de.nuua.primetooler.features.debugtitles.client.DebugTitlesClientModule;
 import de.nuua.primetooler.features.primemenu.client.PrimeMenuClientModule;
 import de.nuua.primetooler.features.camerazoom.client.FrontCameraToggleState;
 import de.nuua.primetooler.features.playermark.client.SpecialNamesState;
@@ -51,14 +58,14 @@ public class PrimeToolerClient implements ClientModInitializer {
 	public void onInitializeClient() {
 		EnvironmentInfo env = PlatformEnvironment.current();
 		ClientSettingsConfig settings = ClientConfigIO.loadClientSettings();
-		boolean specialAccess = PrimeTooler.FORCE_SPECIAL_ACCESS || PlayerMarkRegistry.isAuthorizedUser();
+		boolean uwuAccess = PlayerMarkRegistry.isUwuUser();
 		CameraZoomState.setEnabled(settings.unlimitedZoom);
 		DurabilityGuardState.setEnabled(settings.durabilityGuard);
 		InventoryCalculatorState.setEnabled(settings.inventoryCalc);
 		LocatorBarState.setEnabled(settings.locatorBar);
 		ResourcePackGuardState.setEnabled(settings.blockServerPacks);
 		CheckItemClientModule.setSlotLockingEnabled(settings.slotLocking);
-		AutoSpawnState.setEnabled(settings.autoSpawnLowHealth && specialAccess);
+		AutoSpawnState.setEnabled(settings.autoSpawnLowHealth && uwuAccess);
 		AutoSpawnState.setHeartsThreshold(settings.autoSpawnHeartsThreshold);
 		SpecialNamesState.setEnabled(settings.specialNames);
 		FrontCameraToggleState.setDisabled(settings.disableFrontCamera);
@@ -70,6 +77,9 @@ public class PrimeToolerClient implements ClientModInitializer {
 		de.nuua.primetooler.features.fishbag.client.FishbagTotalState.setWeightEnabled(settings.fishbagWeight);
 		de.nuua.primetooler.features.fishbag.client.FishbagTotalState.setCoinsEnabled(settings.fishbagCoins);
 		de.nuua.primetooler.features.fishbag.client.FishbagTotalState.setMoneyTrackerEnabled(settings.fishMoneyTracker);
+		JobTrackerState.setXpEnabled(settings.jobXpTracker);
+		JobTrackerState.setMoneyEnabled(settings.jobMoneyTracker);
+		AutoAngelSystemState.setEnabled(settings.autoAngelSystem && uwuAccess);
 		ClanTagState.setEnabled(settings.hideClanTag);
 		BeaconSoundState.setEnabled(settings.muteBoosterSound);
 		JackpotSoundState.setEnabled(settings.muteJackpotSound);
@@ -83,6 +93,8 @@ public class PrimeToolerClient implements ClientModInitializer {
 		HudElementRegistry.register(new FishbagWeightHudElement());
 		HudElementRegistry.register(new FishbagCoinsHudElement());
 		HudElementRegistry.register(new FishMoneyTrackerHudElement());
+		HudElementRegistry.register(new JobXpTrackerHudElement());
+		HudElementRegistry.register(new JobMoneyTrackerHudElement());
 		ItemCountOverlayRegistry.register(new TerminalStackCountOverlayProvider());
 		InventoryScanScheduler.register(new FishbagTotalScanJob());
 		SoundMuteRegistry.register(SoundEvents.BEACON_ACTIVATE.location(), BeaconSoundState::isEnabled);
@@ -97,6 +109,9 @@ public class PrimeToolerClient implements ClientModInitializer {
 			new InventoryScanClientModule(),
 			new PrimeMenuClientModule(),
 			new CheckItemClientModule(),
+			new DebugTitlesClientModule(),
+			new AutoAngelSystemClientModule(),
+			new JobTrackerClientModule(),
 			new AutoSpawnClientModule()
 		);
 	}

@@ -2,6 +2,8 @@ package de.nuua.primetooler.features.fishbag.client;
 
 import de.nuua.primetooler.core.Messages;
 import de.nuua.primetooler.core.util.CompactCountFormatter;
+import de.nuua.primetooler.core.util.DotThousandsFormatter;
+import de.nuua.primetooler.api.v1.client.tracking.PerHourTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
@@ -15,6 +17,8 @@ import net.minecraft.world.item.component.ItemLore;
  * PERF: Called by InventoryScanScheduler (every 0.5 seconds by default).
  */
 public final class FishbagTotalState {
+	private static final long HIDE_IDLE_NANOS = 60_000_000_000L;
+
 	private static boolean totalEnabled;
 	private static boolean weightEnabled;
 	private static boolean coinsEnabled;
@@ -26,6 +30,13 @@ public final class FishbagTotalState {
 	private static long totalCoins;
 	private static boolean hasBags;
 
+	private static long lastTotalDisplay;
+	private static long lastMaxDisplay;
+	private static long totalLastChangeNanos;
+	private static long weightLastChangeNanos;
+	private static long coinsLastChangeNanos;
+	private static long moneyLastChangeNanos;
+
 	private static long lastWeight;
 	private static long lastCoins;
 	private static long deltaWeight;
@@ -34,14 +45,8 @@ public final class FishbagTotalState {
 	private static long deltaCoinsUntilNanos;
 	private static boolean haveLastTotals;
 
-	private static long moneyTrackerStartNanos;
-	private static long moneyTrackerPausedSinceNanos;
-	private static long moneyTrackerPausedAccumNanos;
-	private static long moneyTrackerLastUiUpdateNanos;
-	private static long moneyTrackerLastActivityNanos;
-	private static long moneyTrackerObservedCoins;
 	private static long moneyTrackerObservedFish;
-	private static long moneyTrackerGainedCoins;
+	private static final PerHourTracker MONEY_TRACKER = new PerHourTracker(PerHourTracker.DecreaseMode.RESTART);
 	private static String moneyTrackerLastRateDisplay = "0";
 	private static String moneyTrackerText = "";
 
@@ -130,6 +135,38 @@ public final class FishbagTotalState {
 		return moneyTrackerText;
 	}
 
+	public static void resetMoneyTrackerForCommand() {
+		resetMoneyTracker();
+	}
+
+	public static boolean shouldRenderTotalHud() {
+		if (!totalEnabled || !hasBags) {
+			return false;
+		}
+		return shouldRenderByLastChange(totalLastChangeNanos);
+	}
+
+	public static boolean shouldRenderWeightHud() {
+		if (!weightEnabled || !hasBags) {
+			return false;
+		}
+		return shouldRenderByLastChange(weightLastChangeNanos);
+	}
+
+	public static boolean shouldRenderCoinsHud() {
+		if (!coinsEnabled || !hasBags) {
+			return false;
+		}
+		return shouldRenderByLastChange(coinsLastChangeNanos);
+	}
+
+	public static boolean shouldRenderMoneyTrackerHud() {
+		if (!moneyTrackerEnabled || !hasBags) {
+			return false;
+		}
+		return shouldRenderByLastChange(moneyLastChangeNanos);
+	}
+
 	static void scan(Minecraft client, Inventory inv) {
 		if (!totalEnabled && !weightEnabled && !coinsEnabled && !moneyTrackerEnabled) {
 			reset();
@@ -143,6 +180,14 @@ public final class FishbagTotalState {
 			reset();
 			return;
 		}
+
+		long now = System.nanoTime();
+
+		long previousTotal = currentTotal;
+		long previousMax = maxTotal;
+		long previousWeight = totalWeight;
+		long previousCoins = totalCoins;
+		boolean hadBags = hasBags;
 
 		long current = 0L;
 		long max = 0L;
@@ -242,7 +287,7 @@ public final class FishbagTotalState {
 		totalCoins = coins;
 		hasBags = found;
 
-		long now = System.nanoTime();
+		updateHudChangeTimes(now, hadBags, previousTotal, previousMax, previousWeight, previousCoins);
 		updateDeltas(now);
 		updateMoneyTracker(now);
 
@@ -265,6 +310,12 @@ public final class FishbagTotalState {
 		totalWeight = 0L;
 		totalCoins = 0L;
 		hasBags = false;
+		lastTotalDisplay = 0L;
+		lastMaxDisplay = 0L;
+		totalLastChangeNanos = 0L;
+		weightLastChangeNanos = 0L;
+		coinsLastChangeNanos = 0L;
+		moneyLastChangeNanos = 0L;
 		lastWeight = 0L;
 		lastCoins = 0L;
 		deltaWeight = 0L;
@@ -279,16 +330,19 @@ public final class FishbagTotalState {
 	}
 
 	private static void resetMoneyTracker() {
-		moneyTrackerStartNanos = 0L;
-		moneyTrackerPausedSinceNanos = 0L;
-		moneyTrackerPausedAccumNanos = 0L;
-		moneyTrackerLastUiUpdateNanos = 0L;
-		moneyTrackerLastActivityNanos = 0L;
-		moneyTrackerObservedCoins = 0L;
 		moneyTrackerObservedFish = 0L;
-		moneyTrackerGainedCoins = 0L;
+		MONEY_TRACKER.reset();
 		moneyTrackerLastRateDisplay = "0";
-		moneyTrackerText = "";
+		moneyLastChangeNanos = 0L;
+		if (moneyTrackerEnabled) {
+			moneyTrackerText = Messages.applyColorCodes(Messages.getOrFallback(
+				Messages.Id.FISH_MONEY_TRACKER_FORMAT,
+				"&8| &eCoins&7/Hour: &e%s",
+				moneyTrackerLastRateDisplay
+			));
+		} else {
+			moneyTrackerText = "";
+		}
 	}
 
 	private static void updateDeltas(long nowNanos) {
@@ -326,90 +380,79 @@ public final class FishbagTotalState {
 			resetMoneyTracker();
 			return;
 		}
-		if (moneyTrackerStartNanos == 0L) {
-			moneyTrackerStartNanos = nowNanos;
-			moneyTrackerLastActivityNanos = nowNanos;
-			moneyTrackerObservedCoins = totalCoins;
-			moneyTrackerObservedFish = currentTotal;
-			moneyTrackerGainedCoins = 0L;
-			moneyTrackerLastRateDisplay = "0";
-			moneyTrackerText = Messages.applyColorCodes(Messages.get(Messages.Id.FISH_MONEY_TRACKER_FORMAT, moneyTrackerLastRateDisplay));
+		if (moneyLastChangeNanos > 0L && nowNanos - moneyLastChangeNanos >= HIDE_IDLE_NANOS) {
+			resetMoneyTracker();
 			return;
 		}
-
-		// Activity detection: coins gained or fish count increased.
-		boolean activity = false;
-		if (currentTotal > moneyTrackerObservedFish) {
-			activity = true;
-		}
+		boolean fishActivity = currentTotal > moneyTrackerObservedFish;
 		moneyTrackerObservedFish = currentTotal;
+		if (fishActivity) {
+			moneyLastChangeNanos = nowNanos;
+		}
 
-		long coinDiff = totalCoins - moneyTrackerObservedCoins;
-		if (coinDiff > 0L) {
-			activity = true;
-			if (moneyTrackerGainedCoins <= Long.MAX_VALUE - coinDiff) {
-				moneyTrackerGainedCoins += coinDiff;
-			} else {
-				moneyTrackerGainedCoins = Long.MAX_VALUE;
-			}
-			moneyTrackerObservedCoins = totalCoins;
-		} else if (coinDiff < 0L) {
-			// Bag reset/spend: restart tracking.
-			moneyTrackerStartNanos = nowNanos;
-			moneyTrackerPausedSinceNanos = 0L;
-			moneyTrackerPausedAccumNanos = 0L;
-			moneyTrackerLastUiUpdateNanos = 0L;
-			moneyTrackerLastActivityNanos = nowNanos;
-			moneyTrackerObservedCoins = totalCoins;
-			moneyTrackerObservedFish = currentTotal;
-			moneyTrackerGainedCoins = 0L;
-			moneyTrackerLastRateDisplay = "0";
-			moneyTrackerText = Messages.applyColorCodes(Messages.get(Messages.Id.FISH_MONEY_TRACKER_FORMAT, moneyTrackerLastRateDisplay));
+		boolean refresh = MONEY_TRACKER.tick(nowNanos, totalCoins, -1L, fishActivity);
+		if (!refresh) {
 			return;
 		}
-
-		if (activity) {
-			moneyTrackerLastActivityNanos = nowNanos;
-			if (moneyTrackerPausedSinceNanos != 0L) {
-				moneyTrackerPausedAccumNanos += nowNanos - moneyTrackerPausedSinceNanos;
-				moneyTrackerPausedSinceNanos = 0L;
-				moneyTrackerLastUiUpdateNanos = 0L;
-			}
-		}
-
-		// Pause after 30 seconds of no fish/coin activity.
-		if (moneyTrackerPausedSinceNanos == 0L && nowNanos - moneyTrackerLastActivityNanos >= 30_000_000_000L) {
-			moneyTrackerPausedSinceNanos = nowNanos;
-			String paused = Messages.get(Messages.Id.FISH_MONEY_TRACKER_PAUSED);
-			String base = Messages.get(Messages.Id.FISH_MONEY_TRACKER_FORMAT, moneyTrackerLastRateDisplay);
+		moneyTrackerLastRateDisplay = DotThousandsFormatter.format(MONEY_TRACKER.perHourValue());
+		String base = Messages.getOrFallback(
+			Messages.Id.FISH_MONEY_TRACKER_FORMAT,
+			"&8| &eCoins&7/Hour: &e%s",
+			moneyTrackerLastRateDisplay
+		);
+		if (MONEY_TRACKER.isPaused()) {
+			String paused = Messages.getOrFallback(Messages.Id.FISH_MONEY_TRACKER_PAUSED, "PAUSED");
 			moneyTrackerText = Messages.applyColorCodes(base + " &7(" + paused + ")");
 			return;
 		}
-		if (moneyTrackerPausedSinceNanos != 0L) {
-			// Keep paused text until activity resumes.
+		moneyTrackerText = Messages.applyColorCodes(base);
+	}
+
+	private static void updateHudChangeTimes(long nowNanos, boolean hadBags, long previousTotal, long previousMax,
+		long previousWeight, long previousCoins) {
+		if (!hasBags) {
+			totalLastChangeNanos = 0L;
+			weightLastChangeNanos = 0L;
+			coinsLastChangeNanos = 0L;
+			moneyLastChangeNanos = 0L;
+			lastTotalDisplay = 0L;
+			lastMaxDisplay = 0L;
 			return;
 		}
 
-		// Update only every 3 seconds as requested (keep last value between updates).
-		if (moneyTrackerLastUiUpdateNanos != 0L && nowNanos - moneyTrackerLastUiUpdateNanos < 3_000_000_000L) {
-			return;
-		}
-		moneyTrackerLastUiUpdateNanos = nowNanos;
-
-		long elapsedActive = nowNanos - moneyTrackerStartNanos - moneyTrackerPausedAccumNanos;
-		if (elapsedActive <= 0L || moneyTrackerGainedCoins <= 0L) {
-			moneyTrackerLastRateDisplay = "0";
-			moneyTrackerText = Messages.applyColorCodes(Messages.get(Messages.Id.FISH_MONEY_TRACKER_FORMAT, moneyTrackerLastRateDisplay));
+		// Ensure newly detected bags show HUD immediately.
+		if (!hadBags) {
+			totalLastChangeNanos = nowNanos;
+			weightLastChangeNanos = nowNanos;
+			coinsLastChangeNanos = nowNanos;
+			moneyLastChangeNanos = nowNanos;
+			lastTotalDisplay = currentTotal;
+			lastMaxDisplay = maxTotal;
 			return;
 		}
 
-		double perHour = (double) moneyTrackerGainedCoins * 3_600_000_000_000.0 / (double) elapsedActive;
-		if (perHour < 0.0) {
-			perHour = 0.0;
+		if (previousTotal != currentTotal || previousMax != maxTotal || lastTotalDisplay != currentTotal || lastMaxDisplay != maxTotal) {
+			totalLastChangeNanos = nowNanos;
+			lastTotalDisplay = currentTotal;
+			lastMaxDisplay = maxTotal;
 		}
-		long perHourLong = (long) (perHour + 0.5);
-		moneyTrackerLastRateDisplay = CompactCountFormatter.formatKMax(perHourLong);
-		moneyTrackerText = Messages.applyColorCodes(Messages.get(Messages.Id.FISH_MONEY_TRACKER_FORMAT, moneyTrackerLastRateDisplay));
+		if (previousWeight != totalWeight) {
+			weightLastChangeNanos = nowNanos;
+		}
+		if (previousCoins != totalCoins) {
+			coinsLastChangeNanos = nowNanos;
+			if (moneyTrackerEnabled) {
+				moneyLastChangeNanos = nowNanos;
+			}
+		}
+	}
+
+	private static boolean shouldRenderByLastChange(long lastChangeNanos) {
+		if (lastChangeNanos <= 0L) {
+			return false;
+		}
+		long now = System.nanoTime();
+		return now > 0L && now - lastChangeNanos < HIDE_IDLE_NANOS;
 	}
 
 	private static String buildWeightDelta(long nowNanos) {
@@ -439,9 +482,32 @@ public final class FishbagTotalState {
 		long kg = totalGrams / 1000L;
 		long rem = totalGrams - kg * 1000L; // 0..999 grams
 
-		// For larger totals, keep it simple (grouped kilograms, no decimals) and never scale beyond "kg".
+		// For larger totals, scale to tonnes (t). 1t = 1000kg = 1,000,000g.
 		if (kg >= 1000L) {
-			return formatGrouped(kg) + "kg";
+			long tonnes = totalGrams / 1_000_000L;
+			long remGrams = totalGrams - tonnes * 1_000_000L; // 0..999,999 grams
+
+			// Very large totals: keep it simple (grouped tonnes, no decimals).
+			if (tonnes >= 1000L) {
+				return formatGrouped(tonnes) + "t";
+			}
+
+			// Up to 2 decimal digits in t, rounded to 0.01t (10kg).
+			int hundredths = (int) ((remGrams + 5_000L) / 10_000L); // 0..100
+			if (hundredths >= 100) {
+				tonnes++;
+				hundredths = 0;
+			}
+			if (hundredths == 0) {
+				return tonnes + "t";
+			}
+			if ((hundredths % 10) == 0) {
+				return tonnes + "." + (hundredths / 10) + "t";
+			}
+			if (hundredths < 10) {
+				return tonnes + ".0" + hundredths + "t";
+			}
+			return tonnes + "." + hundredths + "t";
 		}
 
 		// Small totals: show up to 2 decimal digits in kg, rounded to 10g.
@@ -555,13 +621,22 @@ public final class FishbagTotalState {
 			return parseKilogramsToGrams(text, unitKg);
 		}
 
-		// 2) Fallback: treat as grams (first integer with separators).
+		// 2) Locate "t" (metric ton / "tonnen"). If present, parse tonnes with optional decimals.
+		int unitT = indexOfTonnes(text);
+		if (unitT >= 0) {
+			return parseTonnesToGrams(text, unitT);
+		}
+
+		// 3) Fallback: treat as grams (first integer with separators).
 		return parseFirstNumber(text, 0);
 	}
 
 	private static boolean containsWeightUnit(String text) {
 		if (text == null || text.isEmpty()) {
 			return false;
+		}
+		if (indexOfTonnes(text) >= 0) {
+			return true;
 		}
 		int len = text.length();
 		boolean seenDigit = false;
@@ -643,6 +718,41 @@ public final class FishbagTotalState {
 		return -1;
 	}
 
+	private static int indexOfTonnes(String text) {
+		if (text == null || text.isEmpty()) {
+			return -1;
+		}
+		int len = text.length();
+		boolean seenDigit = false;
+		for (int i = 0; i < len; i++) {
+			char ch = text.charAt(i);
+			if (ch >= '0' && ch <= '9') {
+				seenDigit = true;
+				continue;
+			}
+			if (isSeparator(ch)) {
+				continue;
+			}
+			if (!seenDigit) {
+				continue;
+			}
+			if (ch != 't' && ch != 'T') {
+				seenDigit = false;
+				continue;
+			}
+			// Accept: "1,34t", "1.34 t", "2ton", "2 tonnen"
+			if (i + 1 >= len) {
+				return i;
+			}
+			char next = text.charAt(i + 1);
+			if (isSeparator(next) || next == 'o' || next == 'O') {
+				return i;
+			}
+			return i;
+		}
+		return -1;
+	}
+
 	private static long parseKilogramsToGrams(String text, int unitIndex) {
 		// WHY: Some servers format weight as "676.4kg" / "0,5 kg".
 		// PERF: Manual parsing; no regex/streams.
@@ -703,6 +813,67 @@ public final class FishbagTotalState {
 			grams += frac * 10L;
 		} else if (fracDigits == 3) {
 			grams += frac;
+		}
+		return grams;
+	}
+
+	private static long parseTonnesToGrams(String text, int unitIndex) {
+		// WHY: Some servers format weight as "1,34t" / "2 tonnen".
+		// PERF: Manual parsing; no regex/streams.
+		long wholeTonnes = 0L;
+		long frac = 0L;
+		int fracDigits = 0;
+		boolean any = false;
+		boolean inFraction = false;
+
+		for (int i = 0; i < unitIndex; i++) {
+			char ch = text.charAt(i);
+			if (ch >= '0' && ch <= '9') {
+				int digit = ch - '0';
+				any = true;
+				if (inFraction) {
+					if (fracDigits < 3) {
+						frac = frac * 10L + digit;
+						fracDigits++;
+					}
+				} else {
+					if (wholeTonnes > (Long.MAX_VALUE - digit) / 10L) {
+						return -1L;
+					}
+					wholeTonnes = wholeTonnes * 10L + digit;
+				}
+				continue;
+			}
+			if (ch == '.' || ch == ',') {
+				if (!inFraction) {
+					int digitsAfter = countDigitsAfter(text, i + 1, unitIndex);
+					if (digitsAfter > 0 && digitsAfter <= 3) {
+						inFraction = true;
+						continue;
+					}
+				}
+				continue;
+			}
+			if (isSeparator(ch)) {
+				continue;
+			}
+		}
+
+		if (!any) {
+			return -1L;
+		}
+
+		// t -> g (1t = 1,000,000g)
+		if (wholeTonnes > Long.MAX_VALUE / 1_000_000L) {
+			return -1L;
+		}
+		long grams = wholeTonnes * 1_000_000L;
+		if (fracDigits == 1) {
+			grams += frac * 100_000L;
+		} else if (fracDigits == 2) {
+			grams += frac * 10_000L;
+		} else if (fracDigits == 3) {
+			grams += frac * 1_000L;
 		}
 		return grams;
 	}

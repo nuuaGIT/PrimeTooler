@@ -6,6 +6,9 @@ import de.nuua.primetooler.core.config.SavedSlotsConfig;
 import de.nuua.primetooler.core.Messages;
 import de.nuua.primetooler.core.lifecycle.Bootstrap;
 import de.nuua.primetooler.core.lifecycle.Module;
+import de.nuua.primetooler.features.fishbag.client.FishbagTotalState;
+import de.nuua.primetooler.features.jobtracker.client.JobTrackerState;
+import de.nuua.primetooler.features.playermark.client.PlayerMarkRegistry;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -82,17 +85,40 @@ public final class CheckItemClientModule implements Module {
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
 			saveSavedSlotsOnDisconnect();
 		});
-		ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> dispatcher.register(
-			ClientCommandManager.literal("primetooler")
-				.then(ClientCommandManager.literal("checkitem").executes(context -> {
-					printHeldItemDetails();
-					return 1;
-				}))
-				.then(ClientCommandManager.literal("debugsync").executes(context -> {
-					toggleDebugSyncAndNotify();
-					return 1;
-				}))
-		));
+		ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
+			dispatcher.register(
+				ClientCommandManager.literal("primetooler")
+					.then(ClientCommandManager.literal("checkitem")
+						.requires(source -> PlayerMarkRegistry.currentUserRank() == PlayerMarkRegistry.Rank.ADMIN)
+						.executes(context -> {
+						printHeldItemDetails();
+						return 1;
+					}))
+					.then(ClientCommandManager.literal("debugsync")
+						.requires(source -> PlayerMarkRegistry.currentUserRank() == PlayerMarkRegistry.Rank.ADMIN)
+						.executes(context -> {
+						toggleDebugSyncAndNotify();
+						return 1;
+					}))
+					.then(ClientCommandManager.literal("resetTracker")
+						.then(ClientCommandManager.literal("jobxp").executes(context -> {
+							JobTrackerState.resetXpTracker();
+							notifyReset("jobxp");
+							return 1;
+						}))
+						.then(ClientCommandManager.literal("jobmoney").executes(context -> {
+							JobTrackerState.resetMoneyTracker();
+							notifyReset("jobmoney");
+							return 1;
+						}))
+						.then(ClientCommandManager.literal("fishmoney").executes(context -> {
+							FishbagTotalState.resetMoneyTrackerForCommand();
+							notifyReset("fishmoney");
+							return 1;
+						}))
+					)
+			);
+		});
 	}
 
 	@Override
@@ -101,6 +127,17 @@ public final class CheckItemClientModule implements Module {
 
 	private static Component msg(Messages.Id id, Object... args) {
 		return Component.literal(Messages.applyColorCodes(Messages.get(id, args)));
+	}
+
+	private static void notifyReset(String id) {
+		Minecraft client = Minecraft.getInstance();
+		if (client == null || client.player == null) {
+			return;
+		}
+		client.player.displayClientMessage(
+			Component.literal("§7[PT] §aReset tracker: §f" + (id == null ? "" : id)),
+			false
+		);
 	}
 
 	private static void printHeldItemDetails() {

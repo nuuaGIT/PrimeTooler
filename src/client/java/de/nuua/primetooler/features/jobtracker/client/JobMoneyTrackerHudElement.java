@@ -1,15 +1,15 @@
-package de.nuua.primetooler.features.fishbag.client;
+package de.nuua.primetooler.features.jobtracker.client;
 
 import de.nuua.primetooler.api.v1.client.hud.HudElement;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 
 /**
- * WHY: Display total fishbag capacity (sum of "current/max" across all bags) on the HUD.
- * PERF: Text is recalculated only when the inventory changes.
+ * WHY: Display job money/hour derived from the actionbar Jobs display.
+ * PERF: Text updates on the poll interval (and is rate-limited to every 3 seconds).
  */
-public final class FishbagTotalHudElement implements HudElement {
-	public static final String ID = "fishbag_total";
+public final class JobMoneyTrackerHudElement implements HudElement {
+	public static final String ID = "job_money_tracker";
 
 	@Override
 	public String id() {
@@ -23,21 +23,22 @@ public final class FishbagTotalHudElement implements HudElement {
 
 	@Override
 	public int defaultY(Minecraft client, int screenWidth, int screenHeight) {
-		return 4;
+		int line = client == null ? 10 : (client.font.lineHeight + 2);
+		return 4 + line * 6;
 	}
 
 	@Override
 	public int width(Minecraft client) {
-		if (!FishbagTotalState.isTotalEnabled() || client == null || client.font == null) {
+		if (!JobTrackerState.isMoneyEnabled() || client == null || client.font == null) {
 			return 0;
 		}
-		String text = FishbagTotalState.totalText();
+		String text = JobTrackerState.moneyText();
 		return client.font.width(text == null ? "" : text);
 	}
 
 	@Override
 	public int height(Minecraft client) {
-		if (!FishbagTotalState.isTotalEnabled() || client == null || client.font == null) {
+		if (!JobTrackerState.isMoneyEnabled() || client == null || client.font == null) {
 			return 0;
 		}
 		return client.font.lineHeight;
@@ -48,11 +49,13 @@ public final class FishbagTotalHudElement implements HudElement {
 		if (graphics == null || client == null || client.font == null) {
 			return;
 		}
-		boolean hasBags = FishbagTotalState.hasBags();
-		if (!editing && (!FishbagTotalState.isTotalEnabled() || !hasBags || !FishbagTotalState.shouldRenderTotalHud())) {
+		if (!editing && !JobTrackerState.isMoneyEnabled()) {
 			return;
 		}
-		String text = FishbagTotalState.totalText();
+		if (!editing && !JobTrackerState.shouldRenderMoneyHud()) {
+			return;
+		}
+		String text = JobTrackerState.moneyText();
 		if (text == null || text.isEmpty()) {
 			return;
 		}

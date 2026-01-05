@@ -49,7 +49,8 @@ public final class FishMoneyTrackerHudElement implements HudElement {
 		if (graphics == null || client == null || client.font == null) {
 			return;
 		}
-		if (!editing && (!FishbagTotalState.isMoneyTrackerEnabled() || !FishbagTotalState.hasBags())) {
+		if (!editing && (!FishbagTotalState.isMoneyTrackerEnabled() || !FishbagTotalState.hasBags()
+			|| !FishbagTotalState.shouldRenderMoneyTrackerHud())) {
 			return;
 		}
 		String text = FishbagTotalState.moneyTrackerText();
@@ -59,4 +60,3 @@ public final class FishMoneyTrackerHudElement implements HudElement {
 		graphics.drawString(client.font, text, x, y, 0xFFFFFFFF, true);
 	}
 }
-

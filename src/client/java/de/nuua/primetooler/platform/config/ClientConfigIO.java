@@ -36,7 +36,7 @@ public final class ClientConfigIO {
 	private static final String HUD_LAYOUT_FILE = "hud_layout.json";
 	private static final String HUD_LAYOUT_FILE_BIN = "hud_layout.bin";
 	private static final byte[] SETTINGS_MAGIC = new byte[] { 'P', 'T', 'C', '1' };
-	private static final int SETTINGS_VERSION = 13;
+	private static final int SETTINGS_VERSION = 16;
 	private static final byte[] CHAT_MAGIC = new byte[] { 'P', 'T', 'C', '2' };
 	private static final int CHAT_VERSION = 1;
 	private static final byte[] ITEMS_MAGIC = new byte[] { 'P', 'T', 'C', '3' };
@@ -370,7 +370,7 @@ public final class ClientConfigIO {
 				int version = in.readInt();
 				if (version != 1 && version != 2 && version != 4 && version != 5 && version != 6
 					&& version != 7 && version != 8 && version != 9 && version != 10 && version != 11
-					&& version != 12
+					&& version != 12 && version != 13 && version != 14 && version != 15
 					&& version != SETTINGS_VERSION) {
 					return null;
 				}
@@ -461,6 +461,23 @@ public final class ClientConfigIO {
 					} else {
 						config.fishMoneyTracker = false;
 					}
+					if (version >= 14) {
+						config.autoAngelSystem = payloadIn.readBoolean();
+					} else {
+						config.autoAngelSystem = false;
+					}
+					if (version >= 15) {
+						config.overallCoinsTracker = payloadIn.readBoolean();
+					} else {
+						config.overallCoinsTracker = false;
+					}
+					if (version >= 16) {
+						config.jobXpTracker = payloadIn.readBoolean();
+						config.jobMoneyTracker = payloadIn.readBoolean();
+					} else {
+						config.jobXpTracker = false;
+						config.jobMoneyTracker = false;
+					}
 					return config;
 				}
 			}
@@ -497,6 +514,10 @@ public final class ClientConfigIO {
 				data.writeBoolean(config.fishbagWeight);
 				data.writeBoolean(config.fishbagCoins);
 				data.writeBoolean(config.fishMoneyTracker);
+				data.writeBoolean(config.autoAngelSystem);
+				data.writeBoolean(config.overallCoinsTracker);
+				data.writeBoolean(config.jobXpTracker);
+				data.writeBoolean(config.jobMoneyTracker);
 			}
 			byte[] payload = payloadOut.toByteArray();
 			CRC32 crc32 = new CRC32();

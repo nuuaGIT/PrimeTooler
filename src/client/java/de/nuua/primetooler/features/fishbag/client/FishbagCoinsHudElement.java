@@ -49,7 +49,7 @@ public final class FishbagCoinsHudElement implements HudElement {
 		if (graphics == null || client == null || client.font == null) {
 			return;
 		}
-		if (!editing && (!FishbagTotalState.isCoinsEnabled() || !FishbagTotalState.hasBags())) {
+		if (!editing && (!FishbagTotalState.isCoinsEnabled() || !FishbagTotalState.hasBags() || !FishbagTotalState.shouldRenderCoinsHud())) {
 			return;
 		}
 		String text = FishbagTotalState.coinsText();
@@ -59,4 +59,3 @@ public final class FishbagCoinsHudElement implements HudElement {
 		graphics.drawString(client.font, text, x, y, 0xFFFFFFFF, true);
 	}
 }
-

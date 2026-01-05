@@ -48,7 +48,7 @@ public final class FishbagWeightHudElement implements HudElement {
 		if (graphics == null || client == null || client.font == null) {
 			return;
 		}
-		if (!editing && (!FishbagTotalState.isWeightEnabled() || !FishbagTotalState.hasBags())) {
+		if (!editing && (!FishbagTotalState.isWeightEnabled() || !FishbagTotalState.hasBags() || !FishbagTotalState.shouldRenderWeightHud())) {
 			return;
 		}
 		String text = FishbagTotalState.weightText();
@@ -58,4 +58,3 @@ public final class FishbagWeightHudElement implements HudElement {
 		graphics.drawString(client.font, text, x, y, 0xFFFFFFFF, true);
 	}
 }
-

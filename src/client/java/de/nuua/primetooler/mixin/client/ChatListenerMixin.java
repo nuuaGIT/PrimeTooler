@@ -33,27 +33,9 @@ public class ChatListenerMixin {
 		if (value == null || overlay || !ChatMentionState.isEnabled()) {
 			return value;
 		}
-		Minecraft client = Minecraft.getInstance();
-		if (client == null || client.player == null) {
-			return value;
-		}
-		String name = client.player.getName().getString();
-		if (name == null || name.isEmpty()) {
-			return value;
-		}
-		if (isLikelyOwnChatLine(value, name)) {
-			return value;
-		}
-		ChatMentionHighlighter.Result result = ChatMentionHighlighter.highlight(value, name);
-		if (!result.matched()) {
-			return value;
-		}
-		Component title = Component.literal(Messages.applyColorCodes(Messages.get(Messages.Id.CHAT_MENTION_TOAST_TITLE)));
-		String alertText = Messages.get(Messages.Id.CHAT_MENTION_ALERT).replace("<NAME>", "System");
-		Component alert = Component.literal(Messages.applyColorCodes(alertText));
-		ChatMentionToast.addOrUpdate(client.getToastManager(), title, alert);
-		SoundPlayer.playWarning(SoundEvents.NOTE_BLOCK_PLING.value(), 0.5f, 1.1f);
-		return result.component();
+
+		// Intentional: never allow "System" to trigger chat mention alerts.
+		return value;
 	}
 
 	@ModifyVariable(
@@ -76,6 +58,12 @@ public class ChatListenerMixin {
 		}
 		if (bound != null && bound.name() != null && name.equals(bound.name().getString())) {
 			return value;
+		}
+		if (bound != null && bound.name() != null) {
+			String sender = bound.name().getString();
+			if (sender != null && sender.equalsIgnoreCase("System")) {
+				return value;
+			}
 		}
 		if (isLikelyOwnChatLine(value, name)) {
 			return value;

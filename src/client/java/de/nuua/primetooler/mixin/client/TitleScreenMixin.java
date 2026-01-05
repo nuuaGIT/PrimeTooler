@@ -52,12 +52,14 @@ public class TitleScreenMixin {
 		int statusY = versionY + (font.lineHeight + 2) * 2;
 		graphics.drawString(font, STATUS_LABEL, PADDING_X, statusY, COLOR_STATUS_LABEL, true);
 		int statusX = PADDING_X + font.width(STATUS_LABEL);
-		if (PrimeTooler.FORCE_SPECIAL_ACCESS || PlayerMarkRegistry.isAuthorizedUser()) {
-			RainbowTextRenderer.draw(graphics, font, STATUS_SPECIAL, statusX, statusY, timeSeconds, TITLE_STYLE);
-		} else {
+		PlayerMarkRegistry.Rank rank = PlayerMarkRegistry.currentUserRank();
+		boolean showSpecial = rank == PlayerMarkRegistry.Rank.ADMIN || rank == PlayerMarkRegistry.Rank.SPECIAL;
+		if (!showSpecial) {
 			Component normal = Component.literal(STATUS_NORMAL).withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC);
 			graphics.drawString(font, normal, statusX, statusY, COLOR_STATUS_NORMAL, true);
+			return;
 		}
+		RainbowTextRenderer.draw(graphics, font, STATUS_SPECIAL, statusX, statusY, timeSeconds, TITLE_STYLE);
 	}
 
 	// Intentionally left empty: we keep vanilla title-screen buttons.

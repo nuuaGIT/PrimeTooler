@@ -65,6 +65,9 @@ public final class Messages {
 		LABEL_FISHBAG_WEIGHT,
 		LABEL_FISHBAG_COINS,
 		LABEL_FISH_MONEY_TRACKER,
+		LABEL_JOB_XP_TRACKER,
+		LABEL_JOB_MONEY_TRACKER,
+		LABEL_AUTO_ANGEL,
 		LABEL_NO_ACCESS,
 		TOOLTIP_LOCKED,
 		TOOLTIP_ZOOM,
@@ -91,6 +94,9 @@ public final class Messages {
 		TOOLTIP_FISHBAG_WEIGHT,
 		TOOLTIP_FISHBAG_COINS,
 		TOOLTIP_FISH_MONEY_TRACKER,
+		TOOLTIP_JOB_XP_TRACKER,
+		TOOLTIP_JOB_MONEY_TRACKER,
+		TOOLTIP_AUTO_ANGEL,
 		TOOLTIP_MSG,
 		TOOLTIP_ADD,
 		TOOLTIP_ADDONLY,
@@ -131,7 +137,15 @@ public final class Messages {
 		FISHBAG_COINS_FORMAT,
 		FISH_MONEY_TRACKER_FORMAT,
 		FISH_MONEY_TRACKER_PAUSED,
+		JOB_XP_TRACKER_FORMAT,
+		JOB_XP_TRACKER_PAUSED,
+		JOB_MONEY_TRACKER_FORMAT,
+		JOB_MONEY_TRACKER_PAUSED,
 		DEBUG_SYNC_STATE,
+		DEBUG_TITLES_STATE,
+		DEBUG_TITLES_TITLE,
+		DEBUG_TITLES_SUBTITLE,
+		DEBUG_TITLES_EMPTY,
 		SYNC_ITEMS,
 		LORE_PREFIX,
 		LORE_SAVED_TEXT,
@@ -148,6 +162,15 @@ public final class Messages {
 
 	public static String get(Id id, Object... args) {
 		return net.minecraft.network.chat.Component.translatable(key(id), args).getString();
+	}
+
+	public static String getOrFallback(Id id, String fallback, Object... args) {
+		String k = key(id);
+		String value = net.minecraft.network.chat.Component.translatable(k, args).getString();
+		if (value == null || value.isEmpty() || value.equals(k)) {
+			return formatFallback(fallback, args);
+		}
+		return value;
 	}
 
 	public static String applyColorCodes(String value) {
@@ -196,6 +219,25 @@ public final class Messages {
 		}
 		Object value = args[index];
 		return value == null ? "" : value;
+	}
+
+	private static String formatFallback(String fallback, Object... args) {
+		if (fallback == null || fallback.isEmpty()) {
+			return "";
+		}
+		if (args == null || args.length == 0) {
+			return fallback;
+		}
+		String out = fallback;
+		for (int i = 0; i < args.length; i++) {
+			int idx = out.indexOf("%s");
+			if (idx < 0) {
+				break;
+			}
+			String a = String.valueOf(arg(args, i));
+			out = out.substring(0, idx) + a + out.substring(idx + 2);
+		}
+		return out;
 	}
 }
 

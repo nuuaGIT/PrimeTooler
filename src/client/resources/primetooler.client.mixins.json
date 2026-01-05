@@ -18,11 +18,14 @@
 		"GuiActionbarMixin",
 		"GuiGraphicsMixin",
 		"GuiGraphicsItemCountInvoker",
+		"GuiTitleAccessor",
+		"GuiOverlayMessageAccessor",
 		"GuiMixin",
 		"HudEffectsMixin",
 		"InventoryScreenMixin",
 		"InventoryEffectsMixin",
 		"ItemStackTooltipMixin",
+		"KeyMappingAccessor",
 		"LocalPlayerMixin",
 		"LocatorBarRendererMixin",
 		"MultiPlayerGameModeMixin",
@@ -30,7 +33,8 @@
 		"PlayerTabOverlayMixin",
 		"ScreenAccessor",
 		"SoundEngineMixin",
-		"TitleScreenMixin"
+		"TitleScreenMixin",
+		"TrackersHudMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
