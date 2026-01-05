@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * WHY: Allow unbounded third-person zoom via the scroll wheel.
+ * WHY: Allow advanced third-person zoom via the scroll wheel.
  * PERF: Small math only when scrolling.
  */
 @Mixin(MouseHandler.class)

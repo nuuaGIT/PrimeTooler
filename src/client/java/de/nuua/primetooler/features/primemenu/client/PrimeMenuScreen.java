@@ -3,9 +3,11 @@ package de.nuua.primetooler.features.primemenu.client;
 import de.nuua.primetooler.core.config.ChatInputsConfig;
 import de.nuua.primetooler.core.config.ClientSettingsConfig;
 import de.nuua.primetooler.core.Messages;
+import de.nuua.primetooler.PrimeTooler;
 import de.nuua.primetooler.features.autospawn.client.AutoSpawnState;
 import de.nuua.primetooler.api.v1.client.text.RainbowTextRenderer;
 import de.nuua.primetooler.api.v1.client.text.RainbowTextStyle;
+import de.nuua.primetooler.features.actionbar.client.ActionbarMoveState;
 import de.nuua.primetooler.features.chatmention.client.ChatMentionState;
 import de.nuua.primetooler.features.checkitem.client.CheckItemClientModule;
 import de.nuua.primetooler.features.doubledrop.client.DoubleDropState;
@@ -22,9 +24,13 @@ import de.nuua.primetooler.features.inventoryeffects.client.InventoryEffectsStat
 import de.nuua.primetooler.features.inventoryeffects.client.HudEffectsState;
 import de.nuua.primetooler.features.locatorbar.client.LocatorBarState;
 import de.nuua.primetooler.features.resourcepackguard.client.ResourcePackGuardState;
+import de.nuua.primetooler.features.terminalstackcount.client.TerminalStackCountState;
+import de.nuua.primetooler.features.fishbag.client.FishbagTotalState;
 import de.nuua.primetooler.platform.config.ClientConfigIO;
 import de.nuua.primetooler.platform.input.PrimeToolerKeyBindings;
 import de.nuua.primetooler.platform.sound.SoundPlayer;
+import de.nuua.primetooler.api.v1.client.hud.HudEditorScreen;
+import de.nuua.primetooler.api.v1.client.hud.HudLayoutState;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -44,9 +50,13 @@ import net.minecraft.client.gui.components.tabs.TabManager;
 import net.minecraft.client.gui.components.tabs.TabNavigationBar;
 import net.minecraft.client.gui.components.ScrollableLayout;
 import net.minecraft.client.gui.layouts.GridLayout;
+import net.minecraft.client.gui.layouts.Layout;
+import net.minecraft.client.gui.layouts.LayoutElement;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -54,6 +64,7 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.Util;
+import org.lwjgl.glfw.GLFW;
 
 public final class PrimeMenuScreen extends Screen {
 	private static final ResourceLocation TAB_HEADER_BACKGROUND =
@@ -65,9 +76,11 @@ public final class PrimeMenuScreen extends Screen {
 	private static final int CONFIG_BUTTON_WIDTH = (int) (BUTTON_WIDTH * 1.2f);
 	private static final int GRID_COLUMNS = 2;
 	private static final int GRID_ROWS = 3;
-	private static final int CHAT_MESSAGES_MAX_DEFAULT = 5;
+	private static final int CHAT_MESSAGES_MAX_DEFAULT = 15;
 	private static final int CHAT_MESSAGES_MAX_SPECIAL = 25;
 	private static final int TAB_CONTENT_TOP_PADDING = 6;
+	private static final int CONFIG_SEARCH_GAP = 6;
+	private static final int CONFIG_HUD_BUTTON_WIDTH = 120;
 	private static final int CHAT_ADD_BUTTON_WIDTH = 24;
 	private static final int CHAT_DELETE_WIDTH = 64;
 	private static final int CHAT_FIELD_WIDTH = 340;
@@ -116,9 +129,9 @@ public final class PrimeMenuScreen extends Screen {
 	@Override
 	protected void init() {
 		tabManager = new TabManager(this::addTabWidget, this::removeWidget);
-		boolean specialAccess = PlayerMarkRegistry.isAuthorizedUser();
+		boolean specialAccess = PrimeTooler.FORCE_SPECIAL_ACCESS || PlayerMarkRegistry.isAuthorizedUser();
 		int maxMessages = getChatMessagesMax(specialAccess);
-		homeTab = new PrimeMenuHomeTab(this::addTabWidget, this::removeWidget);
+		homeTab = new PrimeMenuHomeTab(this, this::addTabWidget, this::removeWidget);
 		chatToolsTab = new ChatToolsTab(ClientConfigIO.loadChatInputs(maxMessages), maxMessages, specialAccess);
 		specialMembersTab = new SpecialMembersTab();
 		tabNavigationBar = TabNavigationBar.builder(tabManager, width)
@@ -152,6 +165,27 @@ public final class PrimeMenuScreen extends Screen {
 			}
 		}
 		return super.keyPressed(event);
+	}
+
+	@Override
+	public boolean mouseClicked(MouseButtonEvent event, boolean unknown) {
+		// 1) Global UI behavior: clicking outside the AutoSpawn threshold input commits and closes it.
+		if (event != null && tabManager != null && homeTab != null && tabManager.getCurrentTab() == homeTab) {
+			var widget = homeTab.autoSpawnWidget;
+			if (widget != null && widget.isEditing()) {
+				double mx = event.x();
+				double my = event.y();
+				int x = widget.getX();
+				int y = widget.getY();
+				int w = widget.getWidth();
+				int h = widget.getHeight();
+				boolean inside = mx >= x && mx <= x + w && my >= y && my <= y + h;
+				if (!inside) {
+					widget.commitAndClose();
+				}
+			}
+		}
+		return super.mouseClicked(event, unknown);
 	}
 
 	@Override
@@ -278,6 +312,7 @@ public final class PrimeMenuScreen extends Screen {
 		private final Component title = Component.literal(Messages.get(Messages.Id.TAB_CONFIG));
 		private final java.util.function.Consumer<AbstractWidget> addWidget;
 		private final java.util.function.Consumer<AbstractWidget> removeWidget;
+		private final Screen owner;
 		private boolean active;
 		private final Minecraft client;
 		private GridLayout contentLayout;
@@ -294,18 +329,22 @@ public final class PrimeMenuScreen extends Screen {
 		private final StringWidget visualHeader;
 		private final StringWidget soundHeader;
 		private final EditBox searchBox;
+		private final Button hudAdjustButton;
 		private final Button slotLockButton;
 		private final Button doubleDropButton;
+		private final AutoSpawnThresholdWidget autoSpawnWidget;
 
 		private PrimeMenuHomeTab(
+			Screen owner,
 			java.util.function.Consumer<AbstractWidget> addWidget,
 			java.util.function.Consumer<AbstractWidget> removeWidget
 		) {
 			this.addWidget = addWidget;
 			this.removeWidget = removeWidget;
+			this.owner = owner;
 			client = Minecraft.getInstance();
 
-			boolean specialAccess = PlayerMarkRegistry.isAuthorizedUser();
+			boolean specialAccess = PrimeTooler.FORCE_SPECIAL_ACCESS || PlayerMarkRegistry.isAuthorizedUser();
 			header = new StringWidget(
 				CONFIG_LAYOUT_WIDTH,
 				CONFIG_LABEL_HEIGHT,
@@ -342,7 +381,7 @@ public final class PrimeMenuScreen extends Screen {
 				client.font,
 				0,
 				0,
-				CONFIG_LAYOUT_WIDTH,
+				Math.max(0, CONFIG_LAYOUT_WIDTH - CONFIG_HUD_BUTTON_WIDTH - CONFIG_SEARCH_GAP),
 				18,
 				Component.empty()
 			);
@@ -352,6 +391,25 @@ public final class PrimeMenuScreen extends Screen {
 					.withStyle(ChatFormatting.GRAY)
 			);
 			searchBox.setResponder(this::applySearch);
+
+			hudAdjustButton = Button.builder(
+				Component.literal(Messages.get(Messages.Id.BUTTON_HUD_ADJUST)),
+				button -> {
+					Minecraft mc = Minecraft.getInstance();
+					if (mc == null) {
+						return;
+					}
+					mc.setScreen(new HudEditorScreen(
+						Component.literal(Messages.get(Messages.Id.BUTTON_HUD_ADJUST)),
+						owner,
+						HudLayoutState.snapshot(),
+						config -> {
+							HudLayoutState.load(config);
+							ClientConfigIO.saveHudLayout(config);
+						}
+					));
+				}
+			).size(CONFIG_HUD_BUTTON_WIDTH, BUTTON_HEIGHT).build();
 
 			gameplayHeader = new StringWidget(
 				CONFIG_LAYOUT_WIDTH,
@@ -363,19 +421,11 @@ public final class PrimeMenuScreen extends Screen {
 
 			Button[] toggleRef = new Button[1];
 			toggleRef[0] = Button.builder(zoomLabel(CameraZoomState.isEnabled()), button -> {
-				if (!specialAccess) {
-					return;
-				}
 				boolean enabled = CameraZoomState.toggleEnabled();
 				toggleRef[0].setMessage(zoomLabel(enabled));
 				saveClientSettings();
 			}).size(CONFIG_BUTTON_WIDTH, BUTTON_HEIGHT).build();
 			toggleRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_ZOOM)));
-			if (!specialAccess) {
-				toggleRef[0].active = false;
-				toggleRef[0].setMessage(noAccessLabel());
-				toggleRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_LOCKED)));
-			}
 			gameplayEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_ZOOM), toggleRef[0]));
 
 			Button[] durabilityRef = new Button[1];
@@ -446,21 +496,59 @@ public final class PrimeMenuScreen extends Screen {
 			gameplayEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_SYNC), syncDebugRef[0]));
 
 			Button[] autoSpawnRef = new Button[1];
-			autoSpawnRef[0] = Button.builder(autoSpawnLabel(AutoSpawnState.isEnabled()), button -> {
-				if (!specialAccess) {
-					return;
-				}
-				boolean enabled = AutoSpawnState.toggleEnabled();
-				autoSpawnRef[0].setMessage(autoSpawnLabel(enabled));
+			autoSpawnWidget = new AutoSpawnThresholdWidget(
+				0,
+				0,
+				CONFIG_BUTTON_WIDTH,
+				BUTTON_HEIGHT,
+				specialAccess
+			);
+			autoSpawnWidget.setTooltip(tooltip(Messages.get(
+				Messages.Id.TOOLTIP_AUTOSPAWN,
+				AutoSpawnThresholdWidget.formatHearts(AutoSpawnState.heartsThreshold())
+			)));
+			if (!specialAccess) {
+				autoSpawnWidget.active = false;
+				autoSpawnWidget.setMessage(noAccessLabel());
+				autoSpawnWidget.setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_LOCKED)));
+			}
+			gameplayEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_AUTOSPAWN), autoSpawnWidget));
+
+			Button[] fishbagTotalRef = new Button[1];
+			fishbagTotalRef[0] = Button.builder(fishbagTotalLabel(FishbagTotalState.isTotalEnabled()), button -> {
+				boolean enabled = FishbagTotalState.toggleTotalEnabled();
+				fishbagTotalRef[0].setMessage(fishbagTotalLabel(enabled));
 				saveClientSettings();
 			}).size(CONFIG_BUTTON_WIDTH, BUTTON_HEIGHT).build();
-			autoSpawnRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_AUTOSPAWN)));
-			if (!specialAccess) {
-				autoSpawnRef[0].active = false;
-				autoSpawnRef[0].setMessage(noAccessLabel());
-				autoSpawnRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_LOCKED)));
-			}
-			gameplayEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_AUTOSPAWN), autoSpawnRef[0]));
+			fishbagTotalRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_FISHBAG_TOTAL)));
+			gameplayEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_FISHBAG_TOTAL), fishbagTotalRef[0]));
+
+			Button[] fishbagWeightRef = new Button[1];
+			fishbagWeightRef[0] = Button.builder(fishbagWeightLabel(FishbagTotalState.isWeightEnabled()), button -> {
+				boolean enabled = FishbagTotalState.toggleWeightEnabled();
+				fishbagWeightRef[0].setMessage(fishbagWeightLabel(enabled));
+				saveClientSettings();
+			}).size(CONFIG_BUTTON_WIDTH, BUTTON_HEIGHT).build();
+			fishbagWeightRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_FISHBAG_WEIGHT)));
+			gameplayEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_FISHBAG_WEIGHT), fishbagWeightRef[0]));
+
+			Button[] fishbagCoinsRef = new Button[1];
+			fishbagCoinsRef[0] = Button.builder(fishbagCoinsLabel(FishbagTotalState.isCoinsEnabled()), button -> {
+				boolean enabled = FishbagTotalState.toggleCoinsEnabled();
+				fishbagCoinsRef[0].setMessage(fishbagCoinsLabel(enabled));
+				saveClientSettings();
+			}).size(CONFIG_BUTTON_WIDTH, BUTTON_HEIGHT).build();
+			fishbagCoinsRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_FISHBAG_COINS)));
+			gameplayEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_FISHBAG_COINS), fishbagCoinsRef[0]));
+
+			Button[] fishMoneyTrackerRef = new Button[1];
+			fishMoneyTrackerRef[0] = Button.builder(fishMoneyTrackerLabel(FishbagTotalState.isMoneyTrackerEnabled()), button -> {
+				boolean enabled = FishbagTotalState.toggleMoneyTrackerEnabled();
+				fishMoneyTrackerRef[0].setMessage(fishMoneyTrackerLabel(enabled));
+				saveClientSettings();
+			}).size(CONFIG_BUTTON_WIDTH, BUTTON_HEIGHT).build();
+			fishMoneyTrackerRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_FISH_MONEY_TRACKER)));
+			gameplayEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_FISH_MONEY_TRACKER), fishMoneyTrackerRef[0]));
 
 			visualHeader = new StringWidget(
 				CONFIG_LAYOUT_WIDTH,
@@ -515,6 +603,15 @@ public final class PrimeMenuScreen extends Screen {
 			inventoryEffectsRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_EFFECTS)));
 			visualEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_EFFECTS), inventoryEffectsRef[0]));
 
+			Button[] terminalStackRef = new Button[1];
+			terminalStackRef[0] = Button.builder(terminalStackCountLabel(TerminalStackCountState.isEnabled()), button -> {
+				boolean enabled = TerminalStackCountState.toggleEnabled();
+				terminalStackRef[0].setMessage(terminalStackCountLabel(enabled));
+				saveClientSettings();
+			}).size(CONFIG_BUTTON_WIDTH, BUTTON_HEIGHT).build();
+			terminalStackRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_TERMINAL_STACK_COUNT)));
+			visualEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_TERMINAL_STACK_COUNT), terminalStackRef[0]));
+
 			Button[] hudEffectsRef = new Button[1];
 			hudEffectsRef[0] = Button.builder(hudEffectsLabel(HudEffectsState.isEnabled()), button -> {
 				boolean enabled = HudEffectsState.toggleEnabled();
@@ -523,6 +620,15 @@ public final class PrimeMenuScreen extends Screen {
 			}).size(CONFIG_BUTTON_WIDTH, BUTTON_HEIGHT).build();
 			hudEffectsRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_HUDEFFECTS)));
 			visualEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_HUDEFFECTS), hudEffectsRef[0]));
+
+			Button[] actionbarMoveRef = new Button[1];
+			actionbarMoveRef[0] = Button.builder(actionbarMoveLabel(ActionbarMoveState.isEnabled()), button -> {
+				boolean enabled = ActionbarMoveState.toggleEnabled();
+				actionbarMoveRef[0].setMessage(actionbarMoveLabel(enabled));
+				saveClientSettings();
+			}).size(CONFIG_BUTTON_WIDTH, BUTTON_HEIGHT).build();
+			actionbarMoveRef[0].setTooltip(tooltip(Messages.get(Messages.Id.TOOLTIP_ACTIONBAR_MOVE)));
+			visualEntries.add(new ButtonEntry(Messages.get(Messages.Id.LABEL_ACTIONBAR_MOVE), actionbarMoveRef[0]));
 
 			soundHeader = new StringWidget(
 				CONFIG_LAYOUT_WIDTH,
@@ -566,6 +672,203 @@ public final class PrimeMenuScreen extends Screen {
 			private ButtonEntry(String label, AbstractWidget button) {
 				this.label = label == null ? "" : label;
 				this.button = button;
+			}
+		}
+
+		private static final class AutoSpawnThresholdWidget extends AbstractWidget {
+			private static final float DEFAULT_HEARTS = AutoSpawnState.DEFAULT_HEARTS_THRESHOLD;
+
+			private final Button toggleButton;
+			private final EditBox input;
+			private final boolean specialAccess;
+			private boolean editing;
+
+			private AutoSpawnThresholdWidget(int x, int y, int width, int height, boolean specialAccess) {
+				super(x, y, width, height, autoSpawnLabel(AutoSpawnState.isEnabled()));
+				this.specialAccess = specialAccess;
+
+				Button[] toggleRef = new Button[1];
+				toggleRef[0] = Button.builder(autoSpawnLabel(AutoSpawnState.isEnabled()), button -> {
+					if (!this.specialAccess) {
+						return;
+					}
+					boolean enabled = AutoSpawnState.toggleEnabled();
+					toggleRef[0].setMessage(autoSpawnLabel(enabled));
+					setMessage(toggleRef[0].getMessage());
+					saveClientSettings();
+				}).size(width, height).build();
+				toggleButton = toggleRef[0];
+
+				Minecraft client = Minecraft.getInstance();
+				input = new EditBox(client.font, 0, 0, width, 18, Component.empty());
+				input.setMaxLength(16);
+				input.setCanLoseFocus(true);
+				input.visible = false;
+			}
+
+			@Override
+			protected void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+				syncChildPositions();
+				toggleButton.active = this.active;
+				if (!editing) {
+					toggleButton.setMessage(getMessage());
+					toggleButton.render(graphics, mouseX, mouseY, delta);
+					return;
+				}
+				input.render(graphics, mouseX, mouseY, delta);
+			}
+
+			@Override
+			public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean unknown) {
+				if (!visible) {
+					return false;
+				}
+				if (event == null) {
+					return false;
+				}
+				syncChildPositions();
+				double mx = event.x();
+				double my = event.y();
+
+				if (editing) {
+					if (mx < getX() || mx > getX() + getWidth() || my < getY() || my > getY() + getHeight()) {
+						commitAndClose();
+						return false;
+					}
+					return input.mouseClicked(event, unknown);
+				}
+
+				if (!this.active || !this.specialAccess) {
+					return false;
+				}
+				if (mx < getX() || mx > getX() + getWidth() || my < getY() || my > getY() + getHeight()) {
+					return false;
+				}
+				if (event.button() == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
+					openEditor();
+					return true;
+				}
+				return toggleButton.mouseClicked(event, unknown);
+			}
+
+			@Override
+			public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent event) {
+				if (!visible) {
+					return false;
+				}
+				syncChildPositions();
+				if (editing) {
+					return input.mouseReleased(event);
+				}
+				return toggleButton.mouseReleased(event);
+			}
+
+			@Override
+			public boolean keyPressed(KeyEvent event) {
+				if (!visible) {
+					return false;
+				}
+				if (!editing) {
+					return toggleButton.keyPressed(event);
+				}
+				if (event != null && (event.key() == GLFW.GLFW_KEY_ENTER || event.key() == GLFW.GLFW_KEY_KP_ENTER)) {
+					commitAndClose();
+					return true;
+				}
+				return input.keyPressed(event);
+			}
+
+			@Override
+			public boolean charTyped(CharacterEvent event) {
+				if (!visible || !editing) {
+					return false;
+				}
+				return input.charTyped(event);
+			}
+
+			@Override
+			public void setFocused(boolean focused) {
+				super.setFocused(focused);
+				if (editing && !focused) {
+					commitAndClose();
+				}
+				input.setFocused(editing && focused);
+			}
+
+			private void openEditor() {
+				editing = true;
+				input.visible = true;
+				input.setValue(formatHearts(AutoSpawnState.heartsThreshold()));
+				input.moveCursorToEnd(false);
+				setFocused(true);
+				input.setFocused(true);
+			}
+
+			private void commitAndClose() {
+				if (!editing) {
+					return;
+				}
+				float value = parseHearts(input.getValue());
+				AutoSpawnState.setHeartsThreshold(value);
+				setTooltip(tooltip(Messages.get(
+					Messages.Id.TOOLTIP_AUTOSPAWN,
+					formatHearts(AutoSpawnState.heartsThreshold())
+				)));
+				saveClientSettings();
+				editing = false;
+				input.visible = false;
+				input.setFocused(false);
+				setFocused(false);
+			}
+
+			private boolean isEditing() {
+				return editing;
+			}
+
+			private static float parseHearts(String raw) {
+				if (raw == null) {
+					return DEFAULT_HEARTS;
+				}
+				String value = raw.trim();
+				if (value.isEmpty()) {
+					return DEFAULT_HEARTS;
+				}
+				value = value.replace(',', '.');
+				try {
+					float parsed = Float.parseFloat(value);
+					if (!Float.isFinite(parsed) || parsed <= 0.0f) {
+						return DEFAULT_HEARTS;
+					}
+					return parsed;
+				} catch (NumberFormatException ignored) {
+					return DEFAULT_HEARTS;
+				}
+			}
+
+			private static String formatHearts(float value) {
+				if (!Float.isFinite(value) || value <= 0.0f) {
+					return Float.toString(DEFAULT_HEARTS);
+				}
+				return Float.toString(value);
+			}
+
+			private void syncChildPositions() {
+				int x = getX();
+				int y = getY();
+				toggleButton.setX(x);
+				toggleButton.setY(y);
+				input.setX(x);
+				input.setY(y + 1);
+			}
+
+			@Override
+			protected void updateWidgetNarration(NarrationElementOutput narration) {
+				// Delegate narration to the underlying widget (button in normal mode, editbox while editing).
+				if (editing) {
+					input.updateNarration(narration);
+				} else {
+					toggleButton.updateNarration(narration);
+				}
 			}
 		}
 
@@ -660,6 +963,7 @@ public final class PrimeMenuScreen extends Screen {
 				desc2.visible = true;
 				desc3.visible = true;
 				searchBox.visible = true;
+				hudAdjustButton.visible = true;
 				refreshKeyTooltips();
 				applySearch(searchBox.getValue());
 				return;
@@ -677,6 +981,7 @@ public final class PrimeMenuScreen extends Screen {
 			desc2.visible = false;
 			desc3.visible = false;
 			searchBox.visible = false;
+			hudAdjustButton.visible = false;
 			gameplayHeader.visible = false;
 			visualHeader.visible = false;
 			soundHeader.visible = false;
@@ -698,44 +1003,6 @@ public final class PrimeMenuScreen extends Screen {
 			}
 		}
 
-		private static final class ScrollableReflection {
-			private static java.lang.reflect.Field containerField;
-			private static java.lang.reflect.Method setScrollAmount;
-			private static boolean initialized;
-
-			private static void scrollToTop(ScrollableLayout layout) {
-				if (layout == null) {
-					return;
-				}
-				if (!initialized) {
-					initialized = true;
-					try {
-						containerField = ScrollableLayout.class.getDeclaredField("container");
-						containerField.setAccessible(true);
-						Class<?> containerClass =
-							Class.forName("net.minecraft.client.gui.components.ScrollableLayout$Container");
-						setScrollAmount = containerClass.getDeclaredMethod("setScrollAmount", double.class);
-						setScrollAmount.setAccessible(true);
-					} catch (ReflectiveOperationException ignored) {
-						containerField = null;
-						setScrollAmount = null;
-						return;
-					}
-				}
-				if (containerField == null || setScrollAmount == null) {
-					return;
-				}
-				try {
-					Object container = containerField.get(layout);
-					if (container != null) {
-						setScrollAmount.invoke(container, 0.0d);
-					}
-				} catch (ReflectiveOperationException ignored) {
-					// Safe fallback: skip scrolling if reflection fails.
-				}
-			}
-		}
-
 		private void rebuildContentLayout(String query) {
 			ScrollableLayout previousScroll = scrollLayout;
 			String q = normalizeSearchText(query);
@@ -744,6 +1011,7 @@ public final class PrimeMenuScreen extends Screen {
 			desc2.visible = true;
 			desc3.visible = true;
 			searchBox.visible = true;
+			hudAdjustButton.visible = true;
 			GridLayout layout = new GridLayout();
 			layout.rowSpacing(3);
 			layout.columnSpacing(12);
@@ -752,7 +1020,12 @@ public final class PrimeMenuScreen extends Screen {
 			layout.addChild(desc1, row++, 0, 1, 2, settings -> settings.alignHorizontallyCenter());
 			layout.addChild(desc2, row++, 0, 1, 2, settings -> settings.alignHorizontallyCenter());
 			layout.addChild(desc3, row++, 0, 1, 2, settings -> settings.alignHorizontallyCenter());
-			layout.addChild(searchBox, row++, 0, 1, 2);
+			GridLayout searchRow = new GridLayout();
+			searchRow.rowSpacing(0);
+			searchRow.columnSpacing(CONFIG_SEARCH_GAP);
+			searchRow.addChild(searchBox, 0, 0);
+			searchRow.addChild(hudAdjustButton, 0, 1);
+			layout.addChild(searchRow, row++, 0, 1, 2);
 			layout.addChild(new SimpleSpacerWidget(CONFIG_LAYOUT_WIDTH, 4), row++, 0, 1, 2);
 
 			boolean gameplayAll = !q.isEmpty() && SECTION_SEARCH_GAMEPLAY.contains(q);
@@ -862,6 +1135,22 @@ public final class PrimeMenuScreen extends Screen {
 		return labelWithState(Messages.get(Messages.Id.LABEL_AUTOSPAWN), enabled);
 	}
 
+	private static Component fishbagTotalLabel(boolean enabled) {
+		return labelWithState(Messages.get(Messages.Id.LABEL_FISHBAG_TOTAL), enabled);
+	}
+
+	private static Component fishbagWeightLabel(boolean enabled) {
+		return labelWithState(Messages.get(Messages.Id.LABEL_FISHBAG_WEIGHT), enabled);
+	}
+
+	private static Component fishbagCoinsLabel(boolean enabled) {
+		return labelWithState(Messages.get(Messages.Id.LABEL_FISHBAG_COINS), enabled);
+	}
+
+	private static Component fishMoneyTrackerLabel(boolean enabled) {
+		return labelWithState(Messages.get(Messages.Id.LABEL_FISH_MONEY_TRACKER), enabled);
+	}
+
 	private static Component specialNamesLabel(boolean enabled) {
 		return labelWithState(Messages.get(Messages.Id.LABEL_SPECIALNAMES), enabled);
 	}
@@ -874,6 +1163,10 @@ public final class PrimeMenuScreen extends Screen {
 		return labelWithState(Messages.get(Messages.Id.LABEL_CHAT_MENTION), enabled);
 	}
 
+	private static Component actionbarMoveLabel(boolean enabled) {
+		return labelWithState(Messages.get(Messages.Id.LABEL_ACTIONBAR_MOVE), enabled);
+	}
+
 	private static Component frontCameraLabel(boolean disabled) {
 		return labelWithState(Messages.get(Messages.Id.LABEL_FRONTCAM), !disabled);
 	}
@@ -884,6 +1177,10 @@ public final class PrimeMenuScreen extends Screen {
 
 	private static Component hudEffectsLabel(boolean enabled) {
 		return labelWithState(Messages.get(Messages.Id.LABEL_HUDEFFECTS), enabled);
+	}
+
+	private static Component terminalStackCountLabel(boolean enabled) {
+		return labelWithState(Messages.get(Messages.Id.LABEL_TERMINAL_STACK_COUNT), enabled);
 	}
 
 	private static Component beaconSoundLabel(boolean enabled) {
@@ -931,10 +1228,17 @@ public final class PrimeMenuScreen extends Screen {
 			LocatorBarState.isEnabled(),
 			CheckItemClientModule.isSlotLockingEnabled(),
 			AutoSpawnState.isEnabled(),
+			AutoSpawnState.heartsThreshold(),
 			SpecialNamesState.isEnabled(),
 			FrontCameraToggleState.isDisabled(),
 			InventoryEffectsState.isEnabled(),
 			HudEffectsState.isEnabled(),
+			ActionbarMoveState.isEnabled(),
+			TerminalStackCountState.isEnabled(),
+			FishbagTotalState.isTotalEnabled(),
+			FishbagTotalState.isWeightEnabled(),
+			FishbagTotalState.isCoinsEnabled(),
+			FishbagTotalState.isMoneyTrackerEnabled(),
 			ClanTagState.isEnabled(),
 			BeaconSoundState.isEnabled(),
 			JackpotSoundState.isEnabled(),
@@ -946,6 +1250,8 @@ public final class PrimeMenuScreen extends Screen {
 
 	private static final class ChatToolsTab implements Tab {
 		private final Component title = Component.literal(Messages.get(Messages.Id.TAB_CHAT));
+		private final Minecraft client;
+		private final ScrollableLayout scrollLayout;
 		private final GridLayout contentLayout = new GridLayout();
 		private final GridLayout controlsLayout = new GridLayout();
 		private final GridLayout messagesLayout = new GridLayout();
@@ -968,7 +1274,7 @@ public final class PrimeMenuScreen extends Screen {
 		private ChatToolsTab(ChatInputsConfig config, int maxMessages, boolean specialAccess) {
 			this.maxMessages = Math.max(1, maxMessages);
 			this.specialAccess = specialAccess;
-			Minecraft client = Minecraft.getInstance();
+			client = Minecraft.getInstance();
 			contentLayout.rowSpacing(CHAT_ROW_SPACING);
 			contentLayout.columnSpacing(CHAT_COLUMN_SPACING);
 			controlsLayout.rowSpacing(0);
@@ -1099,6 +1405,7 @@ public final class PrimeMenuScreen extends Screen {
 
 			contentLayout.addChild(controlsLayout, row++, 0);
 			contentLayout.addChild(messagesLayout, row, 0);
+			scrollLayout = new ScrollableLayout(client, new RecursiveLayout(contentLayout), 0);
 			setAdding(false);
 			setEditing(false);
 		}
@@ -1115,17 +1422,7 @@ public final class PrimeMenuScreen extends Screen {
 
 		@Override
 		public void visitChildren(java.util.function.Consumer<AbstractWidget> consumer) {
-			contentLayout.visitChildren(element -> {
-				if (element instanceof AbstractWidget widget) {
-					consumer.accept(widget);
-				}
-			});
-			controlsLayout.visitChildren(element -> {
-				if (element instanceof AbstractWidget widget) {
-					consumer.accept(widget);
-				}
-			});
-			messagesLayout.visitChildren(element -> {
+			scrollLayout.visitChildren(element -> {
 				if (element instanceof AbstractWidget widget) {
 					consumer.accept(widget);
 				}
@@ -1211,7 +1508,7 @@ public final class PrimeMenuScreen extends Screen {
 		}
 
 		private void scrollToTop() {
-			// No scrolling in this tab.
+			ScrollableReflection.scrollToTop(scrollLayout);
 		}
 
 		private void sendEditToChat() {
@@ -1346,12 +1643,15 @@ public final class PrimeMenuScreen extends Screen {
 			if (lastArea == null) {
 				return;
 			}
-			int x = lastArea.left() + Math.max(0, (lastArea.width() - CHAT_LAYOUT_WIDTH) / 2);
-			contentLayout.setX(x);
-			contentLayout.setY(lastArea.top());
 			controlsLayout.arrangeElements();
 			messagesLayout.arrangeElements();
-			contentLayout.arrangeElements();
+
+			int x = lastArea.left() + Math.max(0, (lastArea.width() - CHAT_LAYOUT_WIDTH) / 2);
+			scrollLayout.setX(x);
+			scrollLayout.setY(lastArea.top());
+			scrollLayout.setMinWidth(CHAT_LAYOUT_WIDTH);
+			scrollLayout.setMaxHeight(lastArea.height());
+			scrollLayout.arrangeElements();
 		}
 
 		private static final class GapWidget extends AbstractWidget {
@@ -1948,10 +2248,107 @@ public final class PrimeMenuScreen extends Screen {
 			// Intentional: spacer has no narration.
 		}
 	}
+
+	/**
+	 * WHY: ScrollableLayout only collects direct children; this wrapper exposes nested widgets for scrolling.
+	 * PERF: Small recursive walk on layout build/arrange paths, no tick work.
+	 */
+	private static final class RecursiveLayout implements Layout {
+		private final Layout delegate;
+
+		private RecursiveLayout(Layout delegate) {
+			this.delegate = delegate;
+		}
+
+		@Override
+		public void arrangeElements() {
+			delegate.arrangeElements();
+		}
+
+		@Override
+		public void visitChildren(java.util.function.Consumer<LayoutElement> consumer) {
+			visitChildrenRecursive(delegate, consumer);
+		}
+
+		@Override
+		public void setX(int x) {
+			delegate.setX(x);
+		}
+
+		@Override
+		public void setY(int y) {
+			delegate.setY(y);
+		}
+
+		@Override
+		public int getX() {
+			return delegate.getX();
+		}
+
+		@Override
+		public int getY() {
+			return delegate.getY();
+		}
+
+		@Override
+		public int getWidth() {
+			return delegate.getWidth();
+		}
+
+		@Override
+		public int getHeight() {
+			return delegate.getHeight();
+		}
+
+		private static void visitChildrenRecursive(Layout layout, java.util.function.Consumer<LayoutElement> consumer) {
+			layout.visitChildren(element -> {
+				consumer.accept(element);
+				if (element instanceof Layout nested) {
+					visitChildrenRecursive(nested, consumer);
+				}
+			});
+		}
+	}
+
+	/**
+	 * WHY: Vanilla ScrollableLayout lacks a public "scrollToTop" API.
+	 * PERF: Reflection is initialized once; no allocations in steady state.
+	 */
+	private static final class ScrollableReflection {
+		private static java.lang.reflect.Field containerField;
+		private static java.lang.reflect.Method setScrollAmount;
+		private static boolean initialized;
+
+		private static void scrollToTop(ScrollableLayout layout) {
+			if (layout == null) {
+				return;
+			}
+			if (!initialized) {
+				initialized = true;
+				try {
+					containerField = ScrollableLayout.class.getDeclaredField("container");
+					containerField.setAccessible(true);
+					Class<?> containerClass =
+						Class.forName("net.minecraft.client.gui.components.ScrollableLayout$Container");
+					setScrollAmount = containerClass.getDeclaredMethod("setScrollAmount", double.class);
+					setScrollAmount.setAccessible(true);
+				} catch (ReflectiveOperationException ignored) {
+					containerField = null;
+					setScrollAmount = null;
+					return;
+				}
+			}
+			if (containerField == null || setScrollAmount == null) {
+				return;
+			}
+			try {
+				Object container = containerField.get(layout);
+				if (container != null) {
+					setScrollAmount.invoke(container, 0.0d);
+				}
+			} catch (ReflectiveOperationException ignored) {
+				// Safe fallback: skip scrolling if reflection fails.
+			}
+		}
+	}
 }
-
-
-
-
-
-

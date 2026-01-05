@@ -41,6 +41,9 @@ public class ChatListenerMixin {
 		if (name == null || name.isEmpty()) {
 			return value;
 		}
+		if (isLikelyOwnChatLine(value, name)) {
+			return value;
+		}
 		ChatMentionHighlighter.Result result = ChatMentionHighlighter.highlight(value, name);
 		if (!result.matched()) {
 			return value;
@@ -71,6 +74,12 @@ public class ChatListenerMixin {
 		if (name == null || name.isEmpty()) {
 			return value;
 		}
+		if (bound != null && bound.name() != null && name.equals(bound.name().getString())) {
+			return value;
+		}
+		if (isLikelyOwnChatLine(value, name)) {
+			return value;
+		}
 		ChatMentionHighlighter.Result result = ChatMentionHighlighter.highlight(value, name);
 		if (!result.matched()) {
 			return value;
@@ -99,13 +108,15 @@ public class ChatListenerMixin {
 		if (client == null || client.player == null) {
 			return value;
 		}
+		if (isSelf(profile, client)) {
+			return value;
+		}
 		String name = client.player.getName().getString();
 		if (name == null || name.isEmpty()) {
 			return value;
 		}
 		ChatMentionHighlighter.Result result = ChatMentionHighlighter.highlight(value.decoratedContent(), name);
-		boolean matched = result.matched();
-		if (!matched && !isSelf(profile, client)) {
+		if (!result.matched()) {
 			return value;
 		}
 		Component title = Component.literal(Messages.applyColorCodes(Messages.get(Messages.Id.CHAT_MENTION_TOAST_TITLE)));
@@ -116,9 +127,6 @@ public class ChatListenerMixin {
 		Component alert = Component.literal(Messages.applyColorCodes(alertText));
 		ChatMentionToast.addOrUpdate(client.getToastManager(), title, alert);
 		SoundPlayer.playWarning(SoundEvents.NOTE_BLOCK_PLING.value(), 0.5f, 1.1f);
-		if (!matched) {
-			return value;
-		}
 		return value.withUnsignedContent(result.component());
 	}
 
@@ -133,12 +141,6 @@ public class ChatListenerMixin {
 			return bound;
 		}
 		Component baseName = bound.name();
-		if (ChatMentionState.isEnabled() && isSelf(profile, Minecraft.getInstance())) {
-			ChatMentionHighlighter.Result highlighted = ChatMentionHighlighter.highlight(baseName, profile.name());
-			if (highlighted.matched()) {
-				baseName = highlighted.component();
-			}
-		}
 		float timeSeconds = (float) (System.nanoTime() * 1.0e-9);
 		Component decorated = PlayerMarkRegistry.decorateMarkedName(
 			profile.id(),
@@ -159,5 +161,63 @@ public class ChatListenerMixin {
 		}
 		java.util.UUID self = client.player.getUUID();
 		return self != null && self.equals(profile.id());
+	}
+
+	private static boolean isLikelyOwnChatLine(Component message, String selfName) {
+		if (message == null || selfName == null || selfName.isEmpty()) {
+			return false;
+		}
+		String raw = message.getString();
+		if (raw == null || raw.isEmpty()) {
+			return false;
+		}
+		int len = raw.length();
+		int start = 0;
+		while (start < len) {
+			char ch = raw.charAt(start);
+			if (ch != ' ' && ch != '\t' && ch != '\n' && ch != '\r') {
+				break;
+			}
+			start++;
+		}
+		if (start >= len) {
+			return false;
+		}
+		String s = raw.substring(start);
+
+		// Common chat formats that include the sender name prefix in the rendered line.
+		String angle = "<" + selfName + ">";
+		if (s.startsWith(angle)) {
+			return true;
+		}
+
+		int idx = s.indexOf(selfName);
+		if (idx < 0 || idx > 24) {
+			return false;
+		}
+		if (idx > 0) {
+			char before = s.charAt(idx - 1);
+			if (before != ' ' && before != ']' && before != ')' && before != '>') {
+				return false;
+			}
+		}
+		int end = idx + selfName.length();
+		if (end >= s.length()) {
+			return true;
+		}
+		char next = s.charAt(end);
+		if (next == ':' || next == '>' || next == '|' || next == '-') {
+			return true;
+		}
+		if (next == ' ' && end + 1 < s.length()) {
+			char after = s.charAt(end + 1);
+			if (after == ':' || after == '>' || after == '|' || after == '-' || after == '\u00BB') {
+				return true;
+			}
+		}
+		if (next == '\u00BB') {
+			return true;
+		}
+		return false;
 	}
 }

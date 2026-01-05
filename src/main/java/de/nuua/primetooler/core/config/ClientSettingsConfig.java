@@ -14,10 +14,17 @@ public final class ClientSettingsConfig {
 	public boolean locatorBar = true;
 	public boolean slotLocking = true;
 	public boolean autoSpawnLowHealth;
+	public float autoSpawnHeartsThreshold = 2.5f;
 	public boolean specialNames = true;
 	public boolean disableFrontCamera;
 	public boolean inventoryEffects = true;
 	public boolean hudEffects = true;
+	public boolean moveActionbar;
+	public boolean terminalStackCount;
+	public boolean fishbagTotal;
+	public boolean fishbagWeight;
+	public boolean fishbagCoins;
+	public boolean fishMoneyTracker;
 	public boolean hideClanTag;
 	@SerializedName("muteBeaconSound")
 	public boolean muteBoosterSound;
@@ -37,10 +44,17 @@ public final class ClientSettingsConfig {
 		boolean locatorBar,
 		boolean slotLocking,
 		boolean autoSpawnLowHealth,
+		float autoSpawnHeartsThreshold,
 		boolean specialNames,
 		boolean disableFrontCamera,
 		boolean inventoryEffects,
 		boolean hudEffects,
+		boolean moveActionbar,
+		boolean terminalStackCount,
+		boolean fishbagTotal,
+		boolean fishbagWeight,
+		boolean fishbagCoins,
+		boolean fishMoneyTracker,
 		boolean hideClanTag,
 		boolean muteBoosterSound,
 		boolean muteJackpotSound,
@@ -55,10 +69,17 @@ public final class ClientSettingsConfig {
 		this.locatorBar = locatorBar;
 		this.slotLocking = slotLocking;
 		this.autoSpawnLowHealth = autoSpawnLowHealth;
+		this.autoSpawnHeartsThreshold = autoSpawnHeartsThreshold;
 		this.specialNames = specialNames;
 		this.disableFrontCamera = disableFrontCamera;
 		this.inventoryEffects = inventoryEffects;
 		this.hudEffects = hudEffects;
+		this.moveActionbar = moveActionbar;
+		this.terminalStackCount = terminalStackCount;
+		this.fishbagTotal = fishbagTotal;
+		this.fishbagWeight = fishbagWeight;
+		this.fishbagCoins = fishbagCoins;
+		this.fishMoneyTracker = fishMoneyTracker;
 		this.hideClanTag = hideClanTag;
 		this.muteBoosterSound = muteBoosterSound;
 		this.muteJackpotSound = muteJackpotSound;

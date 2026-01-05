@@ -1,11 +1,11 @@
 package de.nuua.primetooler.mixin.client;
 
-import de.nuua.primetooler.core.Messages;
+import de.nuua.primetooler.api.v1.client.hud.HudLayoutState;
 import de.nuua.primetooler.features.durabilityguard.client.DurabilityGuardState;
+import de.nuua.primetooler.features.durabilityguard.client.ArmorDurabilityWarningHudElement;
 import de.nuua.primetooler.platform.sound.SoundPlayer;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.sounds.SoundEvents;
@@ -24,16 +24,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(Gui.class)
 public class DurabilityGuardHudMixin {
 	private static final int BLINK_TICKS = 10;
-	private static final int HOTBAR_HEIGHT = 22;
-	private static final int HOTBAR_OFFSET_Y = 22;
-	private static final int HOTBAR_HALF_WIDTH = 91;
-	private static final int TEXT_OFFSET_X = 8;
-	private static final int COLOR_WARNING = 0xFFFF5555;
 	private static final float WARNING_SOUND_VOLUME = 0.4f;
 	private static final float WARNING_SOUND_PITCH = 0.3f;
 
 	@Unique
 	private static boolean primetooler$lastArmorWarningVisible;
+	@Unique
+	private static final ArmorDurabilityWarningHudElement primetooler$armorWarningElement =
+		new ArmorDurabilityWarningHudElement();
 
 	@Inject(method = "renderHotbarAndDecorations", at = @At("TAIL"))
 	private void primetooler$renderArmorWarning(GuiGraphics graphics, DeltaTracker delta, CallbackInfo ci) {
@@ -55,13 +53,15 @@ public class DurabilityGuardHudMixin {
 			SoundPlayer.playWarning(SoundEvents.NOTE_BLOCK_BASS.value(), WARNING_SOUND_VOLUME, WARNING_SOUND_PITCH);
 			primetooler$lastArmorWarningVisible = true;
 		}
-		Font font = minecraft.font;
 		int width = minecraft.getWindow().getGuiScaledWidth();
 		int height = minecraft.getWindow().getGuiScaledHeight();
-		String text = Messages.applyColorCodes(Messages.get(Messages.Id.ARMOR_DURABILITY_LOW));
-		int x = width / 2 + HOTBAR_HALF_WIDTH + TEXT_OFFSET_X;
-		int y = height - HOTBAR_OFFSET_Y + (HOTBAR_HEIGHT - font.lineHeight) / 2;
-		graphics.drawString(font, text, x, y, COLOR_WARNING, true);
+		int elementWidth = primetooler$armorWarningElement.width(minecraft);
+		int elementHeight = primetooler$armorWarningElement.height(minecraft);
+		int defaultX = primetooler$armorWarningElement.defaultX(minecraft, width, height);
+		int defaultY = primetooler$armorWarningElement.defaultY(minecraft, width, height);
+		int x = HudLayoutState.resolveX(primetooler$armorWarningElement.id(), width, elementWidth, defaultX);
+		int y = HudLayoutState.resolveY(primetooler$armorWarningElement.id(), height, elementHeight, defaultY);
+		primetooler$armorWarningElement.render(graphics, minecraft, x, y, 0.0f, false);
 	}
 
 	private static boolean shouldBlink(Gui gui) {

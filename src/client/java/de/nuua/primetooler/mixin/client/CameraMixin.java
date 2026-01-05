@@ -8,8 +8,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
 
 /**
- * WHY: Apply custom third-person zoom distance without collision clipping.
- * PERF: O(1), avoids extra allocations.
+ * WHY: Apply a custom third-person zoom distance while keeping vanilla collision clipping.
+ * PERF: Matches vanilla camera raycast cost (O(1) per setup), no extra allocations.
  */
 @Mixin(Camera.class)
 public class CameraMixin {
@@ -25,6 +25,7 @@ public class CameraMixin {
 		if (Minecraft.getInstance().options.getCameraType().isFirstPerson()) {
 			return original;
 		}
-		return -CameraZoomState.getDistance();
+		float clipped = ((CameraAccessor) (Object) this).primetooler$invokeGetMaxZoom(CameraZoomState.getDistance());
+		return -clipped;
 	}
 }

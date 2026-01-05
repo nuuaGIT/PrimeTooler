@@ -24,7 +24,7 @@ public class TitleScreenMixin {
 	private static final String TITLE_LINE = "PrimeTooler";
 	private static final String STATUS_LABEL = "Status: ";
 	private static final String STATUS_NORMAL = "Normal";
-	private static final String STATUS_SPECIAL = "SPEZIAL-MITGLIED";
+	private static final String STATUS_SPECIAL = "SPEZIAL";
 	private static final int COLOR_STATUS_LABEL = 0xFFCCCCCC;
 	private static final int COLOR_STATUS_NORMAL = 0xFF555555;
 	private static final int COLOR_VERSION = 0xFFB0B0B0;
@@ -52,7 +52,7 @@ public class TitleScreenMixin {
 		int statusY = versionY + (font.lineHeight + 2) * 2;
 		graphics.drawString(font, STATUS_LABEL, PADDING_X, statusY, COLOR_STATUS_LABEL, true);
 		int statusX = PADDING_X + font.width(STATUS_LABEL);
-		if (PlayerMarkRegistry.isAuthorizedUser()) {
+		if (PrimeTooler.FORCE_SPECIAL_ACCESS || PlayerMarkRegistry.isAuthorizedUser()) {
 			RainbowTextRenderer.draw(graphics, font, STATUS_SPECIAL, statusX, statusY, timeSeconds, TITLE_STYLE);
 		} else {
 			Component normal = Component.literal(STATUS_NORMAL).withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC);

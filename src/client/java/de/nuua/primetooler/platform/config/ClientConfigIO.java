@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 import de.nuua.primetooler.core.config.ChatInputsConfig;
 import de.nuua.primetooler.core.config.ClientSettingsConfig;
 import de.nuua.primetooler.core.config.ContainerCacheConfig;
+import de.nuua.primetooler.core.config.HudLayoutConfig;
 import de.nuua.primetooler.core.config.SavedItemsConfig;
 import de.nuua.primetooler.core.config.SavedSlotsConfig;
 import net.fabricmc.loader.api.FabricLoader;
@@ -32,8 +33,10 @@ public final class ClientConfigIO {
 	private static final String CONTAINER_CACHE_FILE_BIN = "container_cache.bin";
 	private static final String SAVED_SLOTS_FILE = "saved_slots.json";
 	private static final String SAVED_SLOTS_FILE_BIN = "saved_slots.bin";
+	private static final String HUD_LAYOUT_FILE = "hud_layout.json";
+	private static final String HUD_LAYOUT_FILE_BIN = "hud_layout.bin";
 	private static final byte[] SETTINGS_MAGIC = new byte[] { 'P', 'T', 'C', '1' };
-	private static final int SETTINGS_VERSION = 8;
+	private static final int SETTINGS_VERSION = 13;
 	private static final byte[] CHAT_MAGIC = new byte[] { 'P', 'T', 'C', '2' };
 	private static final int CHAT_VERSION = 1;
 	private static final byte[] ITEMS_MAGIC = new byte[] { 'P', 'T', 'C', '3' };
@@ -42,6 +45,8 @@ public final class ClientConfigIO {
 	private static final int CACHE_VERSION = 1;
 	private static final byte[] SLOTS_MAGIC = new byte[] { 'P', 'T', 'C', '5' };
 	private static final int SLOTS_VERSION = 1;
+	private static final byte[] HUD_LAYOUT_MAGIC = new byte[] { 'P', 'T', 'C', '6' };
+	private static final int HUD_LAYOUT_VERSION = 1;
 	private static final byte[] SETTINGS_XOR_KEY = new byte[] {
 		0x3A, 0x2F, 0x11, 0x55, 0x6E, 0x09, 0x71, 0x28, 0x44, 0x5B, 0x19, 0x2C
 	};
@@ -124,6 +129,44 @@ public final class ClientConfigIO {
 		try {
 			Files.createDirectories(path.getParent());
 			writeSettingsBin(path, config);
+		} catch (IOException ignored) {
+		}
+	}
+
+	public static HudLayoutConfig loadHudLayout() {
+		Path binPath = configPath(HUD_LAYOUT_FILE_BIN);
+		if (Files.exists(binPath)) {
+			HudLayoutConfig binConfig = readHudLayoutBin(binPath);
+			if (binConfig != null) {
+				return binConfig;
+			}
+		}
+		Path path = configPath(HUD_LAYOUT_FILE);
+		if (Files.exists(path)) {
+			try (Reader reader = Files.newBufferedReader(path)) {
+				HudLayoutConfig config = GSON.fromJson(reader, HudLayoutConfig.class);
+				if (config != null) {
+					writeHudLayoutBin(binPath, config);
+					try {
+						Files.deleteIfExists(path);
+					} catch (IOException ignored) {
+					}
+					return config;
+				}
+			} catch (IOException ignored) {
+			}
+		}
+		return new HudLayoutConfig();
+	}
+
+	public static void saveHudLayout(HudLayoutConfig config) {
+		if (config == null) {
+			return;
+		}
+		Path path = configPath(HUD_LAYOUT_FILE_BIN);
+		try {
+			Files.createDirectories(path.getParent());
+			writeHudLayoutBin(path, config);
 		} catch (IOException ignored) {
 		}
 	}
@@ -326,7 +369,9 @@ public final class ClientConfigIO {
 				}
 				int version = in.readInt();
 				if (version != 1 && version != 2 && version != 4 && version != 5 && version != 6
-					&& version != 7 && version != SETTINGS_VERSION) {
+					&& version != 7 && version != 8 && version != 9 && version != 10 && version != 11
+					&& version != 12
+					&& version != SETTINGS_VERSION) {
 					return null;
 				}
 				int payloadLength = in.readInt();
@@ -387,6 +432,35 @@ public final class ClientConfigIO {
 					} else {
 						config.chatMention = false;
 					}
+					if (version >= 9) {
+						config.moveActionbar = payloadIn.readBoolean();
+					} else {
+						config.moveActionbar = false;
+					}
+					if (version >= 10) {
+						config.autoSpawnHeartsThreshold = payloadIn.readFloat();
+					} else {
+						config.autoSpawnHeartsThreshold = 2.5f;
+					}
+					if (version >= 11) {
+						config.terminalStackCount = payloadIn.readBoolean();
+					} else {
+						config.terminalStackCount = false;
+					}
+					if (version >= 12) {
+						config.fishbagTotal = payloadIn.readBoolean();
+						config.fishbagWeight = payloadIn.readBoolean();
+						config.fishbagCoins = payloadIn.readBoolean();
+					} else {
+						config.fishbagTotal = false;
+						config.fishbagWeight = false;
+						config.fishbagCoins = false;
+					}
+					if (version >= 13) {
+						config.fishMoneyTracker = payloadIn.readBoolean();
+					} else {
+						config.fishMoneyTracker = false;
+					}
 					return config;
 				}
 			}
@@ -416,6 +490,13 @@ public final class ClientConfigIO {
 				data.writeInt(config.doubleDropMode);
 				data.writeInt(config.warningSoundVolume);
 				data.writeBoolean(config.chatMention);
+				data.writeBoolean(config.moveActionbar);
+				data.writeFloat(config.autoSpawnHeartsThreshold);
+				data.writeBoolean(config.terminalStackCount);
+				data.writeBoolean(config.fishbagTotal);
+				data.writeBoolean(config.fishbagWeight);
+				data.writeBoolean(config.fishbagCoins);
+				data.writeBoolean(config.fishMoneyTracker);
 			}
 			byte[] payload = payloadOut.toByteArray();
 			CRC32 crc32 = new CRC32();
@@ -777,5 +858,102 @@ public final class ClientConfigIO {
 			Files.write(path, encoded);
 		} catch (IOException ignored) {
 		}
+	}
+
+	private static HudLayoutConfig readHudLayoutBin(Path path) {
+		try {
+			byte[] encoded = Files.readAllBytes(path);
+			if (encoded.length == 0) {
+				return null;
+			}
+			byte[] decoded = xor(encoded, SETTINGS_XOR_KEY);
+			try (DataInputStream in = new DataInputStream(new ByteArrayInputStream(decoded))) {
+				byte[] magic = new byte[HUD_LAYOUT_MAGIC.length];
+				in.readFully(magic);
+				if (!java.util.Arrays.equals(magic, HUD_LAYOUT_MAGIC)) {
+					return null;
+				}
+				int version = in.readInt();
+				if (version != HUD_LAYOUT_VERSION) {
+					return null;
+				}
+				int payloadLength = in.readInt();
+				if (payloadLength < 0 || payloadLength > decoded.length) {
+					return null;
+				}
+				byte[] payload = new byte[payloadLength];
+				in.readFully(payload);
+				long crcStored = in.readLong();
+				CRC32 crc32 = new CRC32();
+				crc32.update(payload);
+				if (crc32.getValue() != crcStored) {
+					return null;
+				}
+				try (DataInputStream payloadIn = new DataInputStream(new ByteArrayInputStream(payload))) {
+					int count = payloadIn.readInt();
+					if (count < 0 || count > 256) {
+						return null;
+					}
+					java.util.ArrayList<HudLayoutConfig.Entry> entries = new java.util.ArrayList<>(count);
+					for (int i = 0; i < count; i++) {
+						String id = payloadIn.readUTF();
+						float x = payloadIn.readFloat();
+						float y = payloadIn.readFloat();
+						if (id == null || id.isEmpty()) {
+							continue;
+						}
+						if (!Float.isFinite(x) || !Float.isFinite(y)) {
+							continue;
+						}
+						entries.add(new HudLayoutConfig.Entry(id, clamp01(x), clamp01(y)));
+					}
+					return new HudLayoutConfig(entries);
+				}
+			}
+		} catch (IOException ignored) {
+			return null;
+		}
+	}
+
+	private static void writeHudLayoutBin(Path path, HudLayoutConfig config) {
+		try {
+			ByteArrayOutputStream payloadOut = new ByteArrayOutputStream();
+			try (DataOutputStream data = new DataOutputStream(payloadOut)) {
+				java.util.List<HudLayoutConfig.Entry> entries =
+					config.entries == null ? java.util.List.of() : config.entries;
+				data.writeInt(entries.size());
+				for (int i = 0; i < entries.size(); i++) {
+					HudLayoutConfig.Entry entry = entries.get(i);
+					String id = entry == null ? "" : entry.id;
+					data.writeUTF(id == null ? "" : id);
+					data.writeFloat(entry == null ? 0.0f : clamp01(entry.x));
+					data.writeFloat(entry == null ? 0.0f : clamp01(entry.y));
+				}
+			}
+			byte[] payload = payloadOut.toByteArray();
+			CRC32 crc32 = new CRC32();
+			crc32.update(payload);
+			ByteArrayOutputStream rawOut = new ByteArrayOutputStream();
+			try (DataOutputStream out = new DataOutputStream(rawOut)) {
+				out.write(HUD_LAYOUT_MAGIC);
+				out.writeInt(HUD_LAYOUT_VERSION);
+				out.writeInt(payload.length);
+				out.write(payload);
+				out.writeLong(crc32.getValue());
+			}
+			byte[] encoded = xor(rawOut.toByteArray(), SETTINGS_XOR_KEY);
+			Files.write(path, encoded);
+		} catch (IOException ignored) {
+		}
+	}
+
+	private static float clamp01(float value) {
+		if (value < 0.0f) {
+			return 0.0f;
+		}
+		if (value > 1.0f) {
+			return 1.0f;
+		}
+		return value;
 	}
 }

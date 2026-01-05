@@ -11,8 +11,7 @@ import net.minecraft.world.entity.player.Player;
  * PERF: Single float check per tick when enabled.
  */
 public final class AutoSpawnClientModule implements Module {
-	private static final float TRIGGER_HEALTH = 5.0f;
-	private static final float RESET_HEALTH = 6.0f;
+	private static final float RESET_DELTA_HEALTH = 1.0f;
 	private static boolean triggered;
 
 	@Override
@@ -37,14 +36,16 @@ public final class AutoSpawnClientModule implements Module {
 				return;
 			}
 			float health = player.getHealth();
-			if (health <= TRIGGER_HEALTH) {
+			float triggerHealth = Math.max(0.0f, AutoSpawnState.heartsThreshold() * 2.0f);
+			float resetHealth = triggerHealth + RESET_DELTA_HEALTH;
+			if (health <= triggerHealth) {
 				if (!triggered) {
 					sendSpawnCommand(client);
 					triggered = true;
 				}
 				return;
 			}
-			if (health >= RESET_HEALTH) {
+			if (health >= resetHealth) {
 				triggered = false;
 			}
 		});
